@@ -1,0 +1,197 @@
+{
+    "header": {
+        "subject_name": "Verilənlərin struktru və alqoritmlər",
+        "subject_code": "İF-09",
+        "faculty": "Memarlıq və Mühəndislik",
+        "department": "Elektronika və informasiya texnologiyaları"
+    },
+    "stats": {
+        "specialization": "Kompüter mühəndisliyi",
+        "course": 2,
+        "lecture_hours": 34,
+        "seminar_hours": 34,
+        "lab_hours": 0,
+        "total_students": 25,
+        "subject_semester": 4,
+        "subject_credit": 6
+    },
+    "schedule": [],
+    "students": [
+        {
+            "student_id": 1134,
+            "first_name": "Toğrul",
+            "last_name": "Həsənli",
+            "email": "toqrul.hasanli@bk.ru",
+            "initials": "TH"
+        },
+        {
+            "student_id": 1135,
+            "first_name": "Sunay",
+            "last_name": "Əmoyeva",
+            "email": "sunayemoyeva864@gmail.com",
+            "initials": "SƏ"
+        },
+        {
+            "student_id": 1136,
+            "first_name": "Əli",
+            "last_name": "Əliyev",
+            "email": "lay4laid@gmail.com",
+            "initials": "ƏƏ"
+        },
+        {
+            "student_id": 1137,
+            "first_name": "Zəhra",
+            "last_name": "İsmayilova",
+            "email": "zhraismayilova843@gmail.com",
+            "initials": "Zİ"
+        },
+        {
+            "student_id": 1138,
+            "first_name": "İnci",
+            "last_name": "Məmmədova",
+            "email": "ulviyememmedzade893@gmail.com",
+            "initials": "İM"
+        },
+        {
+            "student_id": 1139,
+            "first_name": "Ülvü",
+            "last_name": "Nəsirov",
+            "email": "ulvunasirov17@gmail.com",
+            "initials": "ÜN"
+        },
+        {
+            "student_id": 1140,
+            "first_name": "Hikmət",
+            "last_name": "Məmmədov",
+            "email": "zminemmv08@gmail.com",
+            "initials": "HM"
+        },
+        {
+            "student_id": 1141,
+            "first_name": "Nərgiz",
+            "last_name": "Məmmədzadə",
+            "email": "mzada.n@gmail.com",
+            "initials": "NM"
+        },
+        {
+            "student_id": 1142,
+            "first_name": "Cəfər",
+            "last_name": "Nağiyev",
+            "email": "cefernaciyev336@gmail.com",
+            "initials": "CN"
+        },
+        {
+            "student_id": 1143,
+            "first_name": "Araz",
+            "last_name": "Həsənov",
+            "email": "arazhasanov.02@gmail.com",
+            "initials": "AH"
+        },
+        {
+            "student_id": 1144,
+            "first_name": "Yasin",
+            "last_name": "Ələkbərov",
+            "email": "elekberovyasin62@gmail.com",
+            "initials": "YƏ"
+        },
+        {
+            "student_id": 1145,
+            "first_name": "Nihad",
+            "last_name": "Şirzadov",
+            "email": "nihadsirzadov0@gmail.com",
+            "initials": "NŞ"
+        },
+        {
+            "student_id": 1146,
+            "first_name": "Elnur",
+            "last_name": "Xəlilov",
+            "email": "elnur.xelilov2006@icloud.com",
+            "initials": "EX"
+        },
+        {
+            "student_id": 1147,
+            "first_name": "Kəmaləddin",
+            "last_name": "Həsənzadə",
+            "email": "kmalddinhsnzad142@gmail.com",
+            "initials": "KH"
+        },
+        {
+            "student_id": 1148,
+            "first_name": "Ceyran",
+            "last_name": "Əliyeva",
+            "email": "ayetaliyev893@gmail.com",
+            "initials": "CƏ"
+        },
+        {
+            "student_id": 1149,
+            "first_name": "Nərmin",
+            "last_name": "Əhmədova",
+            "email": "nrminaxmdva@gmail.com",
+            "initials": "NƏ"
+        },
+        {
+            "student_id": 1150,
+            "first_name": "Mələk",
+            "last_name": "Əhməd",
+            "email": "ehmed0605@gmail.com",
+            "initials": "MƏ"
+        },
+        {
+            "student_id": 1151,
+            "first_name": "Elcan",
+            "last_name": "Baxşəliyev",
+            "email": "elcanbxseliyev06@gmail.com",
+            "initials": "EB"
+        },
+        {
+            "student_id": 1152,
+            "first_name": "Zaur",
+            "last_name": "Zehirov",
+            "email": "zaurzehirov77@gmail.com",
+            "initials": "ZZ"
+        },
+        {
+            "student_id": 1153,
+            "first_name": "Tükaz",
+            "last_name": "Rəşidova",
+            "email": "residovatukaz8@gmail.com",
+            "initials": "TR"
+        },
+        {
+            "student_id": 1154,
+            "first_name": "Teymur",
+            "last_name": "Həsənov",
+            "email": "teymurhesenov741@gmail.com",
+            "initials": "TH"
+        },
+        {
+            "student_id": 1155,
+            "first_name": "Əli",
+            "last_name": "Əliyev",
+            "email": "aliyevh148@gmail.com",
+            "initials": "ƏƏ"
+        },
+        {
+            "student_id": 1156,
+            "first_name": "Pərviz",
+            "last_name": "Hüseynli",
+            "email": "phuseynov544@gmail.com",
+            "initials": "PH"
+        },
+        {
+            "student_id": 1157,
+            "first_name": "Yasin",
+            "last_name": "Yertürk",
+            "email": "yasin.yert124@gmail.com",
+            "initials": "YY"
+        },
+        {
+            "student_id": 1158,
+            "first_name": "Serhat Tuğrul",
+            "last_name": "Çi̇flik",
+            "email": "serhatciflik830@gmail.com",
+            "initials": "SÇ"
+        }
+    ],
+    "archive": []
+}

@@ -1,0 +1,17 @@
+# Database configs (Protect sensitive credentials)
+student/config/database.php
+teacher/config/database.php
+
+# Uploaded content
+uploads/*
+!uploads/.gitkeep
+
+# Logs and Temps
+*.log
+tmp/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
