@@ -57,8 +57,13 @@ if ($lesson) {
     ];
 }
 
-// course_title boşdursa (course_id TMIS subject_id olduğu üçün local courses-da yoxdur), TMIS-dən al
-if (empty($lesson['course_title'])) {
+// course_title boşdursa (course_id TMIS subject_id olduğu üçün local courses-da yoxdur) və ya ixtisas məlumatı yoxdursa TMIS-dən al
+$needsTmisData = empty($lesson['course_title']) || 
+                 trim($lesson['specialization_name']) === 'Təyin edilməyib' || 
+                 trim($lesson['course_level']) === 'Təyin edilməyib' || 
+                 trim($lesson['course_level']) === '-';
+
+if ($needsTmisData) {
     $tmisTokenForTitle = TmisApi::getToken();
     if ($tmisTokenForTitle) {
         try {
@@ -68,7 +73,9 @@ if (empty($lesson['course_title'])) {
                 foreach ($subjectsList['data'] as $subj) {
                     $s_id = $subj['id'] ?? $subj['subject_id'] ?? 0;
                     if ($s_id == $lesson['course_id']) {
-                        $lesson['course_title'] = $subj['subject_name'] ?? $subj['name'] ?? '';
+                        if (empty($lesson['course_title'])) {
+                            $lesson['course_title'] = $subj['subject_name'] ?? $subj['name'] ?? '';
+                        }
                         $lesson['specialization_name'] = $subj['profession_name'] ?? 'Təyin edilməyib';
                         $lesson['course_level'] = isset($subj['course']) ? $subj['course'] . '-cü kurs' : 'Təyin edilməyib';
                         break;

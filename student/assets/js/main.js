@@ -16,6 +16,7 @@ function initApp() {
     initToggleSwitches();
     initMobileSidebar();
     initTheme();
+    initLiveAlerts();
 }
 
 /**

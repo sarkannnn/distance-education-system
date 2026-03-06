@@ -1429,8 +1429,9 @@ require_once 'includes/header.php';
         // Only send heartbeat if signal is ready
         if (!signalReady) return;
 
+        const peerId = (p && p.id) ? p.id : '';
         const img = new Image();
-        img.src = `api/heartbeat.php?id=${lID}&t=${Date.now()}`;
+        img.src = `api/heartbeat.php?id=${lID}&peer_id=${peerId}&t=${Date.now()}`;
         img.onload = () => console.log('💓 Heartbeat:', new Date().toLocaleTimeString());
         img.onerror = () => console.error('❌ Heartbeat xətası');
     }
@@ -1454,11 +1455,16 @@ require_once 'includes/header.php';
         }
     });
 
-    // Handle abrupt window close removed
+    window.addEventListener('beforeunload', () => {
+        const peerId = (p && p.id) ? p.id : '';
+        navigator.sendBeacon(`api/heartbeat.php?id=${lID}&peer_id=${peerId}&action=leave&t=${Date.now()}`);
+    });
 
     function leaveLesson() {
         if (confirm("Canlı dərsdən ayrılmaq istədiyinizə əminsiniz?")) {
             console.log("🚀 Dərsi tərk edirsiniz...");
+            const peerId = (p && p.id) ? p.id : '';
+            navigator.sendBeacon(`api/heartbeat.php?id=${lID}&peer_id=${peerId}&action=leave&t=${Date.now()}`);
             setTimeout(() => {
                 window.location.href = 'live-classes.php';
             }, 500);

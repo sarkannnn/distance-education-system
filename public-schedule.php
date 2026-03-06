@@ -780,6 +780,7 @@ try {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
+
         table {
             width: 100%;
             max-width: 100%;
@@ -791,32 +792,37 @@ try {
                 height: auto;
                 overflow: visible;
             }
+
             .main-container {
                 height: auto;
                 overflow: visible;
                 display: block;
             }
+
             .content-grid {
                 flex-direction: column;
                 height: auto;
             }
+
             .portal-sidebar {
                 width: 100%;
                 flex-direction: row;
                 height: auto;
             }
+
             .sidebar-portal-box {
                 flex: 1;
             }
+
             .schedule-column {
                 height: auto;
                 overflow: visible;
                 min-height: auto;
             }
+
             .cards-scroll-area {
-                height: auto;
-                overflow: visible;
-                min-height: auto;
+                height: 450px;
+                overflow-y: auto;
             }
         }
 
@@ -846,63 +852,79 @@ try {
             .content-grid {
                 gap: 15px;
             }
+
             .portal-sidebar {
                 flex-direction: column;
             }
+
             .ndu-header {
                 padding: 15px 10px;
             }
+
             .ndu-header h1 {
                 font-size: 20px;
             }
+
             .ndu-header p {
                 font-size: 13px;
             }
+
             .main-container {
                 padding: 15px 10px;
             }
+
             .schedule-column {
                 padding: 15px;
             }
+
             .column-title {
                 font-size: 18px;
                 margin-bottom: 15px;
             }
+
             .card-header-wrapper {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 10px;
             }
+
             .lesson-card {
                 padding: 15px;
             }
+
             .meta-row {
                 flex-direction: column;
                 gap: 8px;
             }
+
             .card-meta {
                 flex-direction: column;
                 gap: 8px;
             }
+
             .footer-grid {
                 grid-template-columns: 1fr;
             }
+
             .sidebar-portal-box {
                 padding: 20px 15px;
             }
         }
-        
+
         @media (max-width: 480px) {
             .contact-cards-grid {
                 grid-template-columns: 1fr;
             }
+
             .card-metadata-row {
                 flex-direction: column;
                 gap: 2px;
             }
+
             .card-metadata-label {
                 width: 100%;
             }
+
             .footer-bottom-info {
                 flex-direction: column;
                 gap: 15px;
@@ -1069,10 +1091,6 @@ try {
                                     <div class="meta-item">
                                         <i data-lucide="calendar"></i>
                                         <span><?php echo date('d.m.Y', strtotime($archive['activity_date'])); ?></span>
-                                    </div>
-                                    <div class="meta-item">
-                                        <i data-lucide="eye"></i>
-                                        <span><?php echo $archive['views']; ?> baxış</span>
                                     </div>
                                 </div>
                             </div>

@@ -6,7 +6,7 @@ $db = Database::getInstance();
 
 try {
     // Tələbə sessiyasını yoxla (əgər tələbə panelidirsə)
-    session_name('STUDENT_SESSION');
+    session_name('DISTANT_STUDENT_SESSION');
     @session_start();
     $studentId = $_SESSION['user_id'] ?? null;
 
@@ -17,13 +17,7 @@ try {
             LEFT JOIN instructors i ON a.instructor_id = i.id
             LEFT JOIN users u ON i.user_id = u.id
             LEFT JOIN courses c ON a.course_id = c.id
-            WHERE (a.expires_at IS NULL OR a.expires_at > NOW())
-            AND (a.course_id IS NULL OR EXISTS (
-                SELECT 1 FROM live_classes lc 
-                WHERE lc.course_id = a.course_id 
-                AND lc.instructor_id = a.instructor_id 
-                AND lc.status = 'live'
-            ))";
+            WHERE (a.expires_at IS NULL OR a.expires_at > NOW())";
 
     $params = [];
     if ($studentId) {

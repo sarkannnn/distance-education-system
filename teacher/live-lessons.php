@@ -293,7 +293,7 @@ if ($instructor) {
              FROM live_classes lc 
              JOIN courses c ON lc.course_id = c.id 
              WHERE lc.instructor_id = ? AND COALESCE(lc.started_at, lc.start_time, lc.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-             AND lc.status IN ('ended', 'completed')",
+             AND lc.status IN ('ended', 'completed', 'live')",
             [$instructor['id']]
         );
 
