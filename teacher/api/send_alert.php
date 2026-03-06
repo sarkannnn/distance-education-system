@@ -34,8 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($_POST)) {
     try {
         // Timezone problemin qarşısını almaq üçün MySQL-in öz vaxtından istifadə edirik
         $db->query(
-            "INSERT INTO live_alerts (instructor_id, course_id, message, type, expires_at) 
-             VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))",
+            "INSERT INTO live_alerts (instructor_id, course_id, message, type, category, expires_at) 
+             VALUES (?, ?, ?, ?, 'general', DATE_ADD(NOW(), INTERVAL ? MINUTE))",
             [$instructor['id'], $course_id, $message, $type, $duration]
         );
 

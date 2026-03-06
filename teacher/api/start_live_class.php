@@ -246,22 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $course = $db->fetch("SELECT title FROM courses WHERE id = ?", [$course_id]);
         $courseTitle = $course ? $course['title'] : 'Kurs';
 
-        // 5. Bu kursun tələbələrinə bildiriş göndər
-        try {
-            $enrolledStudents = $db->fetchAll("SELECT user_id FROM enrollments WHERE course_id = ?", [$course_id]);
-
-            foreach ($enrolledStudents as $student) {
-                $db->insert('notifications', [
-                    'user_id' => $student['user_id'],
-                    'title' => 'Canlı Dərs Başladı',
-                    'message' => "{$courseTitle} kursu üzrə canlı dərs başladı: {$topic_name}. İndi qoşula bilərsiniz!",
-                    'type' => 'error', // Təcili olduğunu bildirmək üçün qırmızı
-                    'is_read' => 0
-                ]);
-            }
-        } catch (Exception $e) {
-            error_log('Bildiriş göndərmə xətası: ' . $e->getMessage());
-        }
+        // 5. Build dynamic title for live alerts if needed (already done in live_alerts insert below)
 
         // 6. Köhnə aktiv alertləri bitir
         try {
@@ -282,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'course_id' => $course_id,
                 'message' => "Canlı dərs başladı: {$topic_name}. İndi qoşula bilərsiniz!",
                 'type' => 'error',
+                'category' => 'live_started',
                 'expires_at' => date('Y-m-d H:i:s', strtotime("+90 minutes"))
             ]);
         } catch (Exception $e) {

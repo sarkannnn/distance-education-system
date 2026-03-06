@@ -174,3 +174,16 @@ function getMonths()
         'Dekabr'
     ];
 }
+
+/**
+ * JSON Response helper
+ */
+function jsonResponse($data, $statusCode = 200)
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    http_response_code($statusCode);
+    echo json_encode($data);
+    exit;
+}

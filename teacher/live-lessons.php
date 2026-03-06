@@ -814,7 +814,7 @@ require_once 'includes/header.php';
 
         try {
             const formData = new FormData(form);
-            const response = await fetch('./api/send_alert', {
+            const response = await fetch('./api/send_alert.php', {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'

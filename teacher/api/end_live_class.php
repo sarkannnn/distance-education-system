@@ -46,11 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
 
             // 1b. Aktiv alertləri bitir
-            $db->update(
-                'live_alerts',
-                ['expires_at' => date('Y-m-d H:i:s')],
-                'course_id = :cid AND instructor_id = :iid AND expires_at > NOW()',
-                ['cid' => $classInfo['course_id'], 'iid' => $classInfo['instructor_id']]
+            $db->query(
+                "UPDATE live_alerts SET expires_at = NOW() 
+                 WHERE course_id = ? AND instructor_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
+                [$classInfo['course_id'], $classInfo['instructor_id']]
             );
 
             $db->update(

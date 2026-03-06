@@ -45,6 +45,7 @@ try {
         $allCourseIds[] = (int) $e['course_id'];
     }
     $allCourseIds = array_unique($allCourseIds);
+    $_SESSION['my_course_ids'] = $allCourseIds;
 
     // Kurs sayı
     $stats['onlineTotal'] = count($allCourseIds);
@@ -295,9 +296,6 @@ require_once 'includes/header.php';
                     gün və bu həftə üçün tədris planınıza ümumi baxış</p>
             </div>
 
-            <!-- Live Alerts Container -->
-            <div id="liveAlertsContainer" style="margin-bottom: 24px;"></div>
-
             <!-- Statistics Cards -->
             <div class="stats-grid-mockup">
                 <div class="stat-card-mockup orange">
@@ -472,62 +470,7 @@ require_once 'includes/header.php';
 </div>
 
 <script>
-    // Check for Live Alerts
-    async function checkAlerts() {
-        try {
-            const response = await fetch('../api/get_active_alerts.php');
-            const data = await response.json();
 
-            const container = document.getElementById('liveAlertsContainer');
-            if (data.success && data.alerts.length > 0) {
-                let html = '';
-                data.alerts.forEach(alert => {
-                    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
-
-                    let bg, border, text, icon;
-                    if (isDarkMode) {
-                        bg = alert.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : (alert.type === 'warning' ? 'rgba(245, 158, 11, 0.15)' : (alert.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.15)'));
-                        border = alert.type === 'error' ? '#ef4444' : (alert.type === 'warning' ? '#f59e0b' : (alert.type === 'success' ? '#10b981' : '#3b82f6'));
-                        text = alert.type === 'error' ? '#fca5a5' : (alert.type === 'warning' ? '#fcd34d' : (alert.type === 'success' ? '#6ee7b7' : '#93c5fd'));
-                    } else {
-                        bg = alert.type === 'error' ? '#fee2e2' : (alert.type === 'warning' ? '#fef3c7' : (alert.type === 'success' ? '#d1fae5' : '#dbeafe'));
-                        border = alert.type === 'error' ? '#ef4444' : (alert.type === 'warning' ? '#f59e0b' : (alert.type === 'success' ? '#10b981' : '#3b82f6'));
-                        text = alert.type === 'error' ? '#991b1b' : (alert.type === 'warning' ? '#92400e' : (alert.type === 'success' ? '#065f46' : '#1e3a8a'));
-                    }
-
-                    icon = alert.type === 'error' ? 'alert-octagon' : (alert.type === 'warning' ? 'alert-triangle' : 'info');
-                    const timeStr = typeof timeAgo === 'function' ? timeAgo(alert.created_at) : '';
-
-                    html += `
-                        <div class="live-alert-card" style="background: ${bg}; border: 1px solid ${border}; color: ${text};">
-                            <i data-lucide="${icon}"></i>
-                            <div class="live-alert-card-content">
-                                <div class="live-alert-card-header">
-                                    <div class="live-alert-card-title">
-                                        ${alert.course_title ? `<span style="opacity: 0.8; font-weight: 500;">[${alert.course_title}]</span> ` : ''}
-                                        Müəllim: ${alert.instructor_name}
-                                    </div>
-                                    <span class="live-alert-card-time">${timeStr}</span>
-                                </div>
-                                <div class="live-alert-card-message">${alert.message}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            } else {
-                container.innerHTML = '';
-            }
-        } catch (error) {
-            console.error('Alert error:', error);
-        }
-    }
-
-    // Initial check
-    checkAlerts();
-    // Poll every 30 seconds
-    setInterval(checkAlerts, 30000);
 </script>
 
 <style>

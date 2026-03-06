@@ -245,8 +245,8 @@ function initNotifications() {
     // Load notifications
     loadNotifications();
 
-    // Auto-refresh notifications every 60 seconds
-    setInterval(loadNotifications, 60000);
+    // Auto-refresh notifications every 10 seconds for real-time live alert removal
+    setInterval(loadNotifications, 10000);
 }
 
 async function loadNotifications() {
@@ -521,4 +521,60 @@ async function apiRequest(endpoint, options = {}) {
         console.error('API Error:', error);
         throw error;
     }
+}
+
+/**
+ * Global Live Alerts Polling
+ */
+function initLiveAlerts() {
+    let seenAlertIds = JSON.parse(sessionStorage.getItem('seenAlerts')) || [];
+    let seenSet = new Set(seenAlertIds);
+    let initialLoad = true;
+
+    async function checkAlerts() {
+        try {
+            // Because main.js is included in files like student/index.php or student/live-view.php
+            // we can use a relative path if we know all scripts are inside /student/
+            // Assuming we are inside /distant-tehsil/student/ directory
+            const isStudentDir = window.location.pathname.includes('/student/');
+            const pathPrefix = isStudentDir ? '../api/get_active_alerts.php' : 'api/get_active_alerts.php';
+
+            const response = await fetch(pathPrefix);
+            const data = await response.json();
+
+            const container = document.getElementById('liveAlertsContainer');
+            if (data.success && data.alerts && data.alerts.length > 0) {
+                data.alerts.forEach(alert => {
+                    if (!seenSet.has(alert.id)) {
+                        seenSet.add(alert.id);
+                        sessionStorage.setItem('seenAlerts', JSON.stringify([...seenSet]));
+
+                        if (!initialLoad) {
+                            let toastType = alert.type === 'error' ? 'error' : (alert.type === 'success' ? 'success' : 'info');
+                            let msg = alert.course_title ? `[${alert.course_title}] ${alert.message}` : alert.message;
+
+                            // Toast bildirişi göstər
+                            if (typeof customToast === 'function') {
+                                customToast(msg, toastType);
+                            } else if (typeof showToast === 'function') {
+                                showToast(msg, toastType);
+                            } else {
+                                // Fallback: sadə bildiriş
+                                console.log("Yeni Bildiriş:", msg);
+                            }
+
+                            // Həmçinin bildiriş menyusunu yenilə
+                            loadNotifications();
+                        }
+                    }
+                });
+            }
+            initialLoad = false;
+        } catch (error) {
+            console.error('Alert error:', error);
+        }
+    }
+
+    checkAlerts();
+    setInterval(checkAlerts, 10000); // 10 seconds polling
 }

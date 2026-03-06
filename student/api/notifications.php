@@ -18,17 +18,37 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        // 1. Standart bildirişləri al
-        $notifications = $db->fetchAll("
-            SELECT id, title, message, type, is_read, created_at, 'standard' as source
-            FROM notifications 
-            WHERE user_id = ? 
-            ORDER BY created_at DESC 
-            LIMIT 20
-        ", [$currentUser['id']]);
+        // 1. Standart bildirişləri müvəqqəti söndürürük (Yalnız canlı dərslər üçün tələb var)
+        $notifications = []; // Əvvəllər: $db->fetchAll(...)
 
-        // 2. Canlı yayım bildirişlərini (Alerts) al
-        // Tarixçədə (Zəng menyusunda) bunlar silinmir, ana ekranda isə expires_at-a görə silinir
+        $myCourseIds = $_SESSION['my_course_ids'] ?? [];
+        if (empty($myCourseIds) && isset($_SESSION['tmis_token'])) {
+            $tmisSubjects = tmis_get('/student/subjects');
+            $allCourseIds = [];
+            if ($tmisSubjects && is_array($tmisSubjects)) {
+                foreach ($tmisSubjects as $s) {
+                    if (isset($s['id']))
+                        $allCourseIds[] = (int) $s['id'];
+                }
+            }
+            $localEnrollments = $db->fetchAll("SELECT course_id FROM enrollments WHERE user_id = ?", [$currentUser['id']]);
+            foreach ($localEnrollments as $e) {
+                $allCourseIds[] = (int) $e['course_id'];
+            }
+            $myCourseIds = array_unique($allCourseIds);
+            $_SESSION['my_course_ids'] = $myCourseIds;
+        }
+
+        $allowedCourseIds = implode(',', array_map('intval', $myCourseIds));
+
+        $whereClause = "(a.course_id IS NULL OR a.course_id IN (SELECT course_id FROM enrollments WHERE user_id = ?))";
+        if (!empty($allowedCourseIds)) {
+            $whereClause = "(a.course_id IS NULL OR a.course_id IN ($allowedCourseIds) OR a.course_id IN (SELECT course_id FROM enrollments WHERE user_id = ?))";
+        }
+
+        $whereClause .= " AND (a.expires_at IS NULL OR a.expires_at > NOW()) AND (a.category = 'live_started' OR a.category = 'general')";
+
+        // Canlı yayım bildirişlərini (Alerts) al
         $liveAlerts = $db->fetchAll("
             SELECT a.id, 
                    CONCAT('Canlı Bildiriş: ', COALESCE(i.name, CONCAT(u.first_name, ' ', u.last_name))) as title, 
@@ -38,7 +58,7 @@ switch ($method) {
             LEFT JOIN instructors i ON a.instructor_id = i.id
             LEFT JOIN users u ON i.user_id = u.id
             LEFT JOIN courses c ON a.course_id = c.id
-            WHERE (a.course_id IS NULL OR a.course_id IN (SELECT course_id FROM enrollments WHERE user_id = ?))
+            WHERE $whereClause
             ORDER BY a.created_at DESC LIMIT 15
         ", [$currentUser['id']]);
 
