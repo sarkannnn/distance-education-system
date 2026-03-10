@@ -64,60 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $now = date('Y-m-d H:i:s');
     $end_time = date('Y-m-d H:i:s', strtotime("+90 minutes")); // Standart 90 dəqiqə
 
-    // Limitləri yoxla (Əvvəlcə lokalda, sonra TMİS API-dən)
+    // Kurs məlumatlarını al (instructor_id üçün)
     $courseInfo = $db->fetch("SELECT lecture_count, seminar_count, instructor_id FROM courses WHERE id = ?", [$course_id]);
 
-    $limit = 999; // Default limitsiz
-    if ($courseInfo) {
-        if ($lesson_type === 'lecture') {
-            $limit = $courseInfo['lecture_count'] ?? 15;
-        } elseif ($lesson_type === 'seminar') {
-            $limit = $courseInfo['seminar_count'] ?? 15;
-        } else {
-            $limit = $courseInfo['laboratory_count'] ?? 15;
-        }
-    } else {
-        // Lokal courses cədvəlində yoxdursa TMİS API-dən subject detallarını al
-        $tmisTokenCheck = TmisApi::getToken();
-        if ($tmisTokenCheck) {
-            try {
-                $subjectDetail = TmisApi::getSubjectDetails($tmisTokenCheck, (int) $course_id);
-                if ($subjectDetail['success'] && isset($subjectDetail['data'])) {
-                    $sd = $subjectDetail['data'];
-                    if ($lesson_type === 'lecture') {
-                        $limit = $sd['subject_lecture_time'] ?? 999;
-                    } elseif ($lesson_type === 'seminar') {
-                        $limit = $sd['subject_seminar_time'] ?? 999;
-                    } else {
-                        $limit = $sd['laboratory_count'] ?? ($sd['subject_lab_time'] ?? 999);
-                    }
-                }
-            } catch (Exception $e) {
-                // Xəta olsa limit yoxlanmır
-            }
-        }
-    }
-
+    // Dərs nömrəsini hesabla (limit yoxlanmır — limitsiz dərs başlatmaq mümkündür)
     $currentTypeCounts = $db->fetch(
         "SELECT COUNT(*) as cnt FROM live_classes WHERE course_id = ? AND lesson_type = ? AND status IN ('ended', 'completed')",
         [$course_id, $lesson_type]
     );
 
     $current = $currentTypeCounts['cnt'] ?? 0;
-
-    if ($limit > 0 && $limit < 999 && $current >= $limit) {
-        $typeName = 'Dərs';
-        if ($lesson_type === 'lecture')
-            $typeName = 'Mühazirə';
-        elseif ($lesson_type === 'seminar')
-            $typeName = 'Seminar';
-        elseif ($lesson_type === 'laboratory')
-            $typeName = 'Laboratoriya';
-
-        echo json_encode(['success' => false, 'message' => "{$typeName} limiti ({$limit}) artıq dolub. Daha çox {$typeName} başlada bilməzsiniz."]);
-        exit;
-    }
-
     $lesson_number = $current + 1;
 
     try {

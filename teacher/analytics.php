@@ -250,7 +250,7 @@ try {
         $activeClassesCount = $db->fetch("SELECT COUNT(*) as cnt FROM live_classes WHERE status IN ('ended', 'completed') AND instructor_id IN ($idPh)", $myTeacherIds);
     }
 
-    // Arxiv Materialları — qeydə alınmış videolar + arxivlər
+    // Arxiv Materialları — qeydə alınmış videolar (live_classes.recording_path) + arxivlər (archived_lessons)
     $archiveCount = 0;
     if ($isAdmin) {
         $liveRec = $db->fetch("SELECT COUNT(*) as cnt FROM live_classes WHERE recording_path IS NOT NULL AND recording_path != ''");
@@ -271,19 +271,23 @@ try {
         $attendanceRate = round($totalAttRate / count($coursePerformance));
     }
 
-    // Ümumi baxışlar (yalnız archived_lessons-da views var, live_classes-da yoxdur)
+    // Ümumi baxışlar — plan.php ilə eyni mənbə:
+    // 1. archived_lessons.views
+    // 2. live_classes.views (qeydiyyatlı videolar)
     if ($isAdmin) {
         $archViews = $db->fetch("SELECT COALESCE(SUM(views), 0) as total FROM archived_lessons");
+        $liveViews = $db->fetch("SELECT COALESCE(SUM(views), 0) as total FROM live_classes WHERE recording_path IS NOT NULL AND recording_path != ''");
     } else {
         $archViews = $db->fetch("SELECT COALESCE(SUM(views), 0) as total FROM archived_lessons WHERE instructor_id IN ($idPh)", $myTeacherIds);
+        $liveViews = $db->fetch("SELECT COALESCE(SUM(views), 0) as total FROM live_classes WHERE recording_path IS NOT NULL AND recording_path != '' AND instructor_id IN ($idPh)", $myTeacherIds);
     }
-    $totalViewsAll = (int) ($archViews['total'] ?? 0);
+    $totalViewsAll = (int) ($archViews['total'] ?? 0) + (int) ($liveViews['total'] ?? 0);
 
     $metrics = [
         ['label' => 'Aktiv Dərslər', 'value' => $activeClassesCount['cnt'] ?? 0, 'icon' => 'book-open', 'color' => '#0E5995', 'trend' => 'Ümumi', 'trend_color' => 'var(--text-muted)'],
         ['label' => 'Arxiv Materialları', 'value' => $archiveCount, 'icon' => 'archive', 'color' => '#4545F6', 'trend' => 'PDF və Video', 'trend_color' => 'var(--text-muted)'],
         ['label' => 'Ortalama Davamiyyət', 'value' => $attendanceRate . '%', 'icon' => 'users', 'color' => '#10b981', 'trend' => 'Tələbə iştirakı', 'trend_color' => '#10b981'],
-        ['label' => 'Ümumi Baxışlar', 'value' => $totalViewsAll, 'icon' => 'eye', 'color' => '#f59e0b', 'trend' => 'Arxivlərə', 'trend_color' => 'var(--text-muted)'],
+        ['label' => 'Ümumi Baxışlar', 'value' => $totalViewsAll, 'icon' => 'eye', 'color' => '#f59e0b', 'trend' => 'Arxiv + Video', 'trend_color' => 'var(--text-muted)'],
     ];
 } catch (Exception $e) {
     error_log('Analytics Metrics xətası: ' . $e->getMessage());
@@ -291,7 +295,7 @@ try {
         ['label' => 'Aktiv Dərslər', 'value' => 0, 'icon' => 'book-open', 'color' => '#0E5995', 'trend' => 'Ümumi', 'trend_color' => 'var(--text-muted)'],
         ['label' => 'Arxiv Materialları', 'value' => 0, 'icon' => 'archive', 'color' => '#4545F6', 'trend' => 'PDF və Video', 'trend_color' => 'var(--text-muted)'],
         ['label' => 'Ortalama Davamiyyət', 'value' => '0%', 'icon' => 'users', 'color' => '#10b981', 'trend' => 'Tələbə iştirakı', 'trend_color' => '#10b981'],
-        ['label' => 'Ümumi Baxışlar', 'value' => 0, 'icon' => 'eye', 'color' => '#f59e0b', 'trend' => 'Arxivlərə', 'trend_color' => 'var(--text-muted)'],
+        ['label' => 'Ümumi Baxışlar', 'value' => 0, 'icon' => 'eye', 'color' => '#f59e0b', 'trend' => 'Arxiv + Video', 'trend_color' => 'var(--text-muted)'],
     ];
 }
 
