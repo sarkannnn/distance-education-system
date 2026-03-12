@@ -333,9 +333,9 @@ require_once 'includes/header.php';
                 </div>
             </div>
 
-            <div class="grid-3" style="margin-top: 24px;">
+            <div style="margin-top: 24px;">
                 <!-- Students List -->
-                <div class="col-span-2 card p-0 overflow-hidden">
+                <div class="card p-0 overflow-hidden">
                     <div
                         class="p-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
                         <div class="flex items-center gap-3">
@@ -409,81 +409,6 @@ require_once 'includes/header.php';
                         </div>
                     <?php endif; ?>
                 </div>
-
-                <!-- Course Material/Archives -->
-                <div class="space-y-6">
-                    <div class="card p-5">
-                        <div class="flex items-center justify-between mb-5">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    style="width: 36px; height: 36px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                    <i data-lucide="folder-open" style="color: #f59e0b; width: 18px;"></i>
-                                </div>
-                                <h2 class="font-bold text-gray-900 text-sm md:text-base">Arxiv Materialları</h2>
-                            </div>
-                        </div>
-
-                        <?php if (empty($archives)): ?>
-                            <div class="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                <i data-lucide="file-question" class="mx-auto mb-3 text-gray-300"
-                                    style="width: 28px; height: 28px;"></i>
-                                <p class="text-sm text-muted font-medium mb-4">Bu dərs üçün arxiv yoxdur.</p>
-                                <a href="plan.php"
-                                    class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm">
-                                    <i data-lucide="plus-circle" style="width: 16px;"></i>
-                                    Material Əlavə Et
-                                </a>
-                            </div>
-                        <?php else: ?>
-                            <div class="space-y-3">
-                                <?php foreach ($archives as $archive):
-                                    $isPdf = !empty($archive['pdf_url']);
-                                    $iconColor = $isPdf ? '#ef4444' : '#3b82f6';
-                                    $iconBg = $isPdf ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)';
-                                    $iconName = $isPdf ? 'file-text' : 'video';
-
-                                    // Link düzəlişi
-                                    $link = !empty($archive['video_url']) ? $archive['video_url'] : ($archive['pdf_url'] ?? '');
-
-                                    // Əgər link 'teacher/' ilə başlayırsa, onu silirik
-                                    if (!empty($link) && is_string($link) && strpos($link, 'teacher/') === 0) {
-                                        $link = substr($link, 8);
-                                    }
-                                    ?>
-                                    <div
-                                        class="group p-3 rounded-xl bg-gray-50/50 border border-gray-100 hover:border-primary/20 hover:bg-white hover:shadow-sm transition-all duration-300 flex items-center justify-between">
-                                        <div class="flex items-center gap-3 overflow-hidden">
-                                            <div
-                                                style="min-width: 36px; height: 36px; background: <?php echo $iconBg; ?>; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                                <i data-lucide="<?php echo $iconName; ?>"
-                                                    style="color: <?php echo $iconColor; ?>; width: 18px;"></i>
-                                            </div>
-                                            <div class="min-w-0">
-                                                <h4 class="text-sm font-semibold text-gray-900 truncate">
-                                                    <?php echo e($archive['title']); ?>
-                                                </h4>
-                                                <p class="text-[10px] text-muted flex items-center gap-1 mt-0.5">
-                                                    <i data-lucide="calendar" style="width: 10px;"></i>
-                                                    <?php echo date('d.m.Y', strtotime($archive['created_at'])); ?>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <a href="<?php echo $link; ?>" target="_blank"
-                                            class="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-gray-100 text-gray-400 hover:bg-primary hover:text-white hover:border-primary transition-all">
-                                            <i data-lucide="<?php echo $isPdf ? 'eye' : 'play'; ?>" style="width: 12px;"></i>
-                                        </a>
-                                    </div>
-                                <?php endforeach; ?>
-                                <a href="plan.php"
-                                    class="block w-full py-2.5 text-center text-[11px] font-bold text-muted uppercase tracking-wider bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors mt-2">
-                                    Bütün arxivə bax
-                                </a>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-
             </div>
         </div>
 </div>

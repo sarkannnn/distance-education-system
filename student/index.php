@@ -53,18 +53,24 @@ try {
     if (!empty($allCourseIds)) {
         $courseIdsList = implode(',', $allCourseIds);
 
+        $courseMatchSql = "(course_id IN ($courseIdsList)";
+        foreach ($allCourseIds as $cid) {
+            $courseMatchSql .= " OR FIND_IN_SET(" . (int)$cid . ", stream_course_ids)";
+        }
+        $courseMatchSql .= ")";
+
         $liveWeek = $db->fetch(
             "SELECT COUNT(id) as count FROM live_classes 
-             WHERE course_id IN ($courseIdsList)
-             AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1)"
+             WHERE $courseMatchSql
+             AND YEARWEEK(start_time, 1) = YEARWEEK(CURDATE(), 1)"
         );
         $stats['liveThisWeek'] = $liveWeek['count'] ?? 0;
 
         $liveMonth = $db->fetch(
             "SELECT COUNT(id) as count FROM live_classes 
-             WHERE course_id IN ($courseIdsList)
-             AND MONTH(created_at) = MONTH(CURRENT_DATE()) 
-             AND YEAR(created_at) = YEAR(CURRENT_DATE())"
+             WHERE $courseMatchSql
+             AND MONTH(start_time) = MONTH(CURRENT_DATE()) 
+             AND YEAR(start_time) = YEAR(CURRENT_DATE())"
         );
         $stats['liveThisMonth'] = $liveMonth['count'] ?? 0;
     }
@@ -72,7 +78,7 @@ try {
     if (!empty($allCourseIds)) {
         $archiveCountLive = $db->fetch(
             "SELECT COUNT(*) as count FROM live_classes lc
-             WHERE lc.course_id IN ($courseIdsList)
+             WHERE $courseMatchSql
              AND lc.recording_path IS NOT NULL AND lc.recording_path != ''"
         );
         $archiveCountManual = $db->fetch(

@@ -26,7 +26,7 @@ try {
     $todayLessons = $db->fetchAll(
         "SELECT lc.id, lc.title as topic_name, lc.status, lc.start_time,
                 COALESCE(NULLIF(lc.subject_name, 'Fənn'), c.title, 'Fənn') as course_title, 
-                COALESCE(NULLIF(lc.specialty_name, ''), i.specialty, i.department, 'Ümumi') as specialization_name,
+                (CASE WHEN lc.is_stream = 1 AND lc.specialty_name IS NOT NULL AND lc.specialty_name != '' AND lc.specialty_name != 'Axın (çoxlu ixtisas)' THEN lc.specialty_name ELSE COALESCE(NULLIF(NULLIF(lc.specialty_name, ''), 'Axın (çoxlu ixtisas)'), i.specialty, i.department, 'Ümumi') END) as specialization_name,
                 COALESCE(NULLIF(lc.course_level, '-'), i.course_level, '-') as course_level_val,
                 COALESCE(NULLIF(lc.instructor_name, ''), NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), i.name, 'Müəllim təyin edilməyib') as instructor_display_name, 
                 COALESCE(NULLIF(lc.instructor_title, ''), i.title, '') as instructor_title
@@ -51,7 +51,7 @@ try {
         "SELECT lc.id, 
                 lc.title as topic_name, 
                 COALESCE(NULLIF(lc.subject_name, 'Fənn'), c.title, 'Fənn') as course_title, 
-                COALESCE(NULLIF(lc.specialty_name, ''), i.specialty, i.department, 'Ümumi') as specialization_name,
+                (CASE WHEN lc.is_stream = 1 AND lc.specialty_name IS NOT NULL AND lc.specialty_name != '' AND lc.specialty_name != 'Axın (çoxlu ixtisas)' THEN lc.specialty_name ELSE COALESCE(NULLIF(NULLIF(lc.specialty_name, ''), 'Axın (çoxlu ixtisas)'), i.specialty, i.department, 'Ümumi') END) as specialization_name,
                 COALESCE(NULLIF(lc.course_level, '-'), i.course_level, '-') as course_level_val,
                 COALESCE(NULLIF(lc.instructor_name, ''), NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), i.name, 'Müəllim təyin edilməyib') as instructor_display_name, 
                 COALESCE(NULLIF(lc.instructor_title, ''), i.title, '') as instructor_title,
@@ -74,7 +74,7 @@ try {
         "SELECT al.id, 
                 al.title as topic_name, 
                 COALESCE(NULLIF(al.subject_name, 'Fənn'), c.title, 'Fənn') as course_title, 
-                COALESCE(NULLIF(al.specialty_name, ''), i.specialty, i.department, 'Ümumi') as specialization_name,
+                COALESCE(NULLIF(NULLIF(al.specialty_name, ''), 'Axın (çoxlu ixtisas)'), i.specialty, i.department, 'Ümumi') as specialization_name,
                 COALESCE(NULLIF(al.course_level, '-'), i.course_level, '-') as course_level_val,
                 COALESCE(NULLIF(al.instructor_name, ''), NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), i.name, 'Müəllim təyin edilməyib') as instructor_display_name, 
                 COALESCE(NULLIF(al.instructor_title, ''), i.title, '') as instructor_title,

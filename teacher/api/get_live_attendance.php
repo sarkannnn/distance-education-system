@@ -52,7 +52,7 @@ try {
 
 // 1. Get Course ID first - Support both local ID and TMİS Session ID
 $liveClass = $db->fetch(
-    "SELECT id, course_id, instructor_id FROM live_classes WHERE id = ? OR tmis_session_id = ?",
+    "SELECT id, course_id, instructor_id, is_stream, stream_course_ids FROM live_classes WHERE id = ? OR tmis_session_id = ?",
     [$liveClassId, $liveClassId]
 );
 
@@ -61,7 +61,7 @@ if (!$liveClass) {
     $subjectId = $_GET['subject_id'] ?? null;
     if ($subjectId) {
         $liveClass = $db->fetch(
-            "SELECT id, course_id, instructor_id FROM live_classes WHERE course_id = ? AND status = 'live' ORDER BY id DESC LIMIT 1",
+            "SELECT id, course_id, instructor_id, is_stream, stream_course_ids FROM live_classes WHERE course_id = ? AND status = 'live' ORDER BY id DESC LIMIT 1",
             [$subjectId]
         );
     }
@@ -76,50 +76,67 @@ if (!$liveClass) {
 $internalId = $liveClass['id'];
 $courseId = $liveClass['course_id'];
 $instructorId = $liveClass['instructor_id'];
+$isStream = (int)($liveClass['is_stream'] ?? 0);
+$streamCourseIds = array_filter(explode(',', $liveClass['stream_course_ids'] ?? ''));
+
+// Build list of all applicable course IDs
+$allCourseIds = [$courseId];
+if ($isStream && !empty($streamCourseIds)) {
+    $allCourseIds = array_unique(array_merge($allCourseIds, $streamCourseIds));
+}
+$allCourseIds = array_values($allCourseIds); // Important: Re-index for PDO parameter matching
 
 // 3. Get Full Student Roster from TMIS
 $tmisToken = TmisApi::getToken();
 $roster = [];
-if ($tmisToken && $courseId > 0) {
-    try {
-        $details = TmisApi::getSubjectDetails($tmisToken, (int) $courseId);
-        if ($details['success'] && isset($details['data']['students']) && is_array($details['data']['students'])) {
-            $sidMap = [];
-            foreach ($details['data']['students'] as $s) {
-                $id = $s['id'] ?? ($s['student_id'] ?? 0);
-                if (!$id)
-                    continue;
+$sidMap = [];
 
-                $roster[$id] = [
-                    'userId' => $id,
-                    'name' => ($s['last_name'] ?? ($s['surname'] ?? '')) . ' ' . ($s['first_name'] ?? ($s['name'] ?? '')) . (!empty($s['father_name']) ? ' ' . $s['father_name'] : ''),
-                    'role' => 'student',
-                    'is_online' => false,
-                    'is_kicked' => 0,
-                    'peer_id' => null,
-                    'joined_at' => null
-                ];
+if ($tmisToken) {
+    foreach ($allCourseIds as $cId) {
+        if ($cId <= 0) continue;
+        try {
+            $details = TmisApi::getSubjectDetails($tmisToken, (int) $cId);
+            if ($details['success'] && isset($details['data']['students']) && is_array($details['data']['students'])) {
+                foreach ($details['data']['students'] as $s) {
+                    $id = $s['id'] ?? ($s['student_id'] ?? 0);
+                    if (!$id) continue;
+                    
+                    // Already added (multi-major overlap prevention)
+                    if (isset($roster[$id])) continue;
 
-                if (!empty($s['student_id'])) {
-                    $sidMap[$s['student_id']] = $id;
+                    $roster[$id] = [
+                        'userId' => $id,
+                        'name' => ($s['last_name'] ?? ($s['surname'] ?? '')) . ' ' . ($s['first_name'] ?? ($s['name'] ?? '')) . (!empty($s['father_name']) ? ' ' . $s['father_name'] : ''),
+                        'role' => 'student',
+                        'is_online' => false,
+                        'is_kicked' => 0,
+                        'peer_id' => null,
+                        'joined_at' => null
+                    ];
+
+                    if (!empty($s['student_id'])) {
+                        $sidMap[$s['student_id']] = $id;
+                    }
                 }
             }
+        } catch (Exception $e) {
+            error_log('Get Live Attendance TMIS Roster Error (Course '.$cId.'): ' . $e->getMessage());
         }
-    } catch (Exception $e) {
-        error_log('Get Live Attendance TMIS Roster Error: ' . $e->getMessage());
     }
 }
 
-// Fallback to local enrollment ONLY IF roster is still empty
-if (empty($roster)) {
-    $localRoster = $db->fetchAll("
-        SELECT u.id as user_id, CONCAT(u.first_name, ' ', u.last_name) as full_name, u.role as user_role
-        FROM users u
-        JOIN enrollments e ON u.id = e.user_id
-        WHERE e.course_id = ?
-    ", [$courseId]);
+// Fallback to local enrollment ONLY IF roster is still empty OR to supplement missing ones
+// (Axın dərsi olduğu üçün bütün fənlərin tələbələrini çəkək)
+$coursePlaceholders = implode(',', array_fill(0, count($allCourseIds), '?'));
+$localRoster = $db->fetchAll("
+    SELECT u.id as user_id, CONCAT(u.first_name, ' ', u.last_name) as full_name, u.role as user_role
+    FROM users u
+    JOIN enrollments e ON u.id = e.user_id
+    WHERE e.course_id IN ($coursePlaceholders)
+", $allCourseIds);
 
-    foreach ($localRoster as $s) {
+foreach ($localRoster as $s) {
+    if (!isset($roster[$s['user_id']])) {
         $roster[$s['user_id']] = [
             'userId' => $s['user_id'],
             'name' => $s['full_name'],

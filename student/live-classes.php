@@ -63,14 +63,24 @@ try {
 $studentSubjectIds = array_unique(array_filter($studentSubjectIds));
 
 // Lokal live_classes cədvəlindən birbaşa oxu (redundant metadata istifadə, JOIN lazım deyil)
+// Axın dərsləri dəstəyi: stream_course_ids sütununda FIND_IN_SET ilə axtarış
 try {
     if (!empty($studentSubjectIds)) {
         $placeholders = implode(',', array_fill(0, count($studentSubjectIds), '?'));
         $params = array_merge($studentSubjectIds, $studentSubjectIds);
+
+        // Axın dərsləri üçün FIND_IN_SET şərtlərini əlavə et
+        $streamConditions = [];
+        foreach ($studentSubjectIds as $sid) {
+            $streamConditions[] = "FIND_IN_SET(?, lc.stream_course_ids) > 0";
+            $params[] = $sid;
+        }
+        $streamSQL = !empty($streamConditions) ? ' OR (' . implode(' OR ', $streamConditions) . ')' : '';
+
         $dbLive = $db->fetchAll(
             "SELECT lc.* FROM live_classes lc 
              WHERE lc.status IN ('live', 'starting-soon', 'ending-soon')
-             AND (lc.course_id IN ($placeholders) OR lc.tmis_subject_id IN ($placeholders))
+             AND (lc.course_id IN ($placeholders) OR lc.tmis_subject_id IN ($placeholders){$streamSQL})
              ORDER BY lc.start_time ASC",
             $params
         );

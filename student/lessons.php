@@ -28,13 +28,12 @@ if ($tmisSubjects && is_array($tmisSubjects)) {
         $cTmisId = (int) ($subject['id'] ?? 0);
 
         // RECALCULATE for 'Online Only' progress from local DB
-        // TMİS progress-i oflayn dərsləri də əhatə edə bilər, 
-        // lakin biz "Distant" sistemdə yalnız onlayn dərsləri göstəririk.
+        // Distant sistemdə yalnız onlayn dərsləri göstəririk.
         $onlineDone = $db->fetch(
             "SELECT COUNT(*) as cnt FROM live_classes 
-             WHERE (course_id = ? OR tmis_subject_id = ?) 
+             WHERE (course_id = ? OR tmis_subject_id = ? OR FIND_IN_SET(?, stream_course_ids)) 
              AND status IN ('ended', 'completed')",
-            [$cTmisId, $cTmisId]
+            [$cTmisId, $cTmisId, $cTmisId]
         );
         $totalDone = (int) ($onlineDone['cnt'] ?? 0);
 

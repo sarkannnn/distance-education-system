@@ -14,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log("Ending live class. Received ID: " . $live_class_id);
 
         // 1. Canlı dərsi bitir (Status: ended) və faktiki müddəti hesabla
-        $classInfo = $db->fetch("SELECT id, start_time, course_id, instructor_id, tmis_session_id FROM live_classes WHERE id = ?", [$live_class_id]);
+        $classInfo = $db->fetch("SELECT id, start_time, course_id, instructor_id, tmis_session_id, is_stream, stream_course_ids FROM live_classes WHERE id = ?", [$live_class_id]);
 
         // Fallback: tmis_session_id ilə axtar
         if (!$classInfo) {
-            $classInfo = $db->fetch("SELECT id, start_time, course_id, instructor_id, tmis_session_id FROM live_classes WHERE tmis_session_id = ?", [$live_class_id]);
+            $classInfo = $db->fetch("SELECT id, start_time, course_id, instructor_id, tmis_session_id, is_stream, stream_course_ids FROM live_classes WHERE tmis_session_id = ?", [$live_class_id]);
             if ($classInfo) {
                 $live_class_id = $classInfo['id']; // Real DB id
             }
@@ -45,19 +45,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ['id' => $live_class_id]
             );
 
-            // 1b. Aktiv alertləri bitir
-            $db->query(
-                "UPDATE live_alerts SET expires_at = NOW() 
-                 WHERE course_id = ? AND instructor_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
-                [$classInfo['course_id'], $classInfo['instructor_id']]
-            );
+            // 1b. Aktiv alertləri bitir və schedule-u tamamla
+            // Axın dərsi olduqda bütün əlaqəli fənlər üçün et
+            $affectedCourseIds = [$classInfo['course_id']];
+            if (!empty($classInfo['is_stream']) && !empty($classInfo['stream_course_ids'])) {
+                $streamIds = explode(',', $classInfo['stream_course_ids']);
+                $affectedCourseIds = array_unique(array_merge($affectedCourseIds, $streamIds));
+            }
 
-            $db->update(
-                'schedule',
-                ['status' => 'completed'],
-                'live_class_id = :id OR (type = "live" AND status = "in-progress" AND course_id = :cid)',
-                ['id' => $live_class_id, 'cid' => $classInfo['course_id']]
-            );
+            foreach ($affectedCourseIds as $cid) {
+                // Aktiv alertləri bitir
+                $db->query(
+                    "UPDATE live_alerts SET expires_at = NOW() 
+                     WHERE course_id = ? AND instructor_id = ? AND (expires_at IS NULL OR expires_at > NOW())",
+                    [$cid, $classInfo['instructor_id']]
+                );
+
+                // Schedule status yenilə
+                $db->update(
+                    'schedule',
+                    ['status' => 'completed'],
+                    'live_class_id = :id OR (type = "live" AND status = "in-progress" AND course_id = :cid)',
+                    ['id' => $live_class_id, 'cid' => $cid]
+                );
+            }
         }
 
         // ============================================================

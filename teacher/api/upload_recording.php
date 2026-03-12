@@ -126,8 +126,9 @@ if ($lesson && isset($lesson['start_time']) && $lesson['start_time']) {
 }
 
 // ==========================================================
-// TMİS API-yə canlı dərsi bitirmək bildirişi göndərmək
+// TMİS API-yə canlı dərsi bitirmək bildirişi göndərmək — DISABLED (local only)
 // ==========================================================
+/*
 $tmisToken = TmisApi::getToken();
 if ($tmisToken) {
     try {
@@ -147,6 +148,7 @@ if ($tmisToken) {
         file_put_contents($logFile, $logData, FILE_APPEND);
     }
 }
+*/
 
 // ============================================================
 // Pre-saved chunk faylını yoxla (periodic flush zamanı yazılıb)
@@ -241,8 +243,9 @@ if ($fileSaved) {
         }
 
         // ==========================================================
-        // TMİS-ə həmçinin Arxiv Materialı kimi yüklə (Background)
+        // TMİS-ə həmçinin Arxiv Materialı kimi yüklə — DISABLED (local only)
         // ==========================================================
+        /*
         if ($tmisToken && $courseId > 0) {
             $uploadFilePath = realpath($targetPath);
             if ($uploadFilePath && file_exists($uploadFilePath)) {
@@ -262,6 +265,7 @@ if ($fileSaved) {
                 }
             }
         }
+        */
 
         // Final response logic if fastcgi_finish_request was not used
         if (!function_exists('fastcgi_finish_request')) {

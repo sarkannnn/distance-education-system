@@ -252,10 +252,12 @@ if ($tmisToken) {
                     // ============================================================
                     $matchedTopic = null;
                     $matchedDuration = null;
+                    $matchedLocalLiveId = null;
 
                     // Yanaşma 1: Fayl adından lesson ID tap (lokal fayllar üçün)
                     if (!empty($fileUrl) && preg_match('/lesson_(\d+)_/i', $fileUrl, $matches)) {
                         $localLiveClassId = (int) $matches[1];
+                        $matchedLocalLiveId = $localLiveClassId;
 
                         // Fix: Only mark as matched if TMIS version actually has a video
                         // If it's just a placeholder (#), we want to keep the local record available.
@@ -303,6 +305,9 @@ if ($tmisToken) {
                             }
                         }
                         if ($bestMatch) {
+                            if (!$matchedLocalLiveId) {
+                                $matchedLocalLiveId = $bestMatch['id'];
+                            }
                             if ($fileUrl != '#' && !empty($fileUrl)) {
                                 $tmisMatchedLocalLiveIds[] = $bestMatch['id'];
                             }
@@ -451,6 +456,9 @@ if ($tmisToken) {
                         if ($bestLocal) {
                             $fileUrl = '../uploads/videos/' . $bestLocal['recording_path'];
                             $tmisMatchedLocalLiveIds[] = $bestLocal['id'];
+                            if (!$matchedLocalLiveId) {
+                                $matchedLocalLiveId = $bestLocal['id'];
+                            }
                         }
                     }
 
@@ -458,6 +466,7 @@ if ($tmisToken) {
                         'id' => ($isLive ? 'live_' : 'arch_') . ($item['id'] ?? 0),
                         'db_id' => $item['id'] ?? 0,
                         'tmis_session_id' => $matchedTmisSessionId ?? ($item['id'] ?? 0),
+                        'local_live_id' => $matchedLocalLiveId,
                         'title' => $itemTitle, // Əsas Başlıq
                         'course_id' => $cId,
                         'course_name' => $sInfo['subject_name'] ?? ($item['course_name'] ?? ($item['subject_name'] ?? 'Fənn')),
@@ -554,7 +563,9 @@ if (!empty($myTeacherIds) || $isAdmin) {
     }
 
     $liveRecordings = $db->fetchAll(
-        "SELECT lc.*, c.title as course_name, ins.name as instructor_name, ins.user_id as ins_user_id
+        "SELECT lc.*, 
+                (CASE WHEN lc.is_stream = 1 AND lc.specialty_name = 'Axın (çoxlu ixtisas)' THEN NULL ELSE lc.specialty_name END) as specialty_name,
+                c.title as course_name, ins.name as instructor_name, ins.user_id as ins_user_id
          FROM live_classes lc
          LEFT JOIN courses c ON (lc.course_id = c.id OR lc.course_id = c.tmis_subject_id)
          LEFT JOIN instructors ins ON lc.instructor_id = ins.id
@@ -563,8 +574,11 @@ if (!empty($myTeacherIds) || $isAdmin) {
         $paramsLive
     );
     foreach ($liveRecordings as $rec) {
-        // Əgər bu dərs TMİS-dən gəlibsə və siyahıya əlavə olunubsa, yenidən əlavə etmə!
-        if (in_array($rec['id'], $tmisMatchedLocalLiveIds)) {
+        // Əgər bu dərs TMİS-dən gəlibsə və siyahıya əlavə olunubsa, 
+        // yalnız o halda skip et ki, bu NORMAL dərsdir. 
+        // Axın dərsləri (is_stream=1) üçün skip etmirik, çünki TMİS-dən gələn 
+        // məlumatda yalnız bir fənn ID-si olur, bizə isə hamısı lazımdır.
+        if (in_array($rec['id'], $tmisMatchedLocalLiveIds) && empty($rec['is_stream'])) {
             continue;
         }
 
@@ -630,14 +644,18 @@ if (!empty($myTeacherIds) || $isAdmin) {
         }
 
         $sInfo = $subjectMap[$rec['course_id']] ?? [];
-        $specName = $sInfo['profession_name'] ?? 'Təyin edilməyib';
+        $specName = (!empty($rec['specialty_name']) && $rec['specialty_name'] !== 'Axın (çoxlu ixtisas)') 
+                    ? $rec['specialty_name'] 
+                    : ($sInfo['profession_name'] ?? 'Təyin edilməyib');
         $courseLvl = isset($sInfo['course']) ? $sInfo['course'] . '-cü kurs' : 'Təyin edilməyib';
 
         $archivedLessons[] = [
             'id' => 'live_' . $rec['id'],
             'db_id' => $rec['id'],
+            'local_live_id' => $rec['id'],
             'title' => $localTitle, // Kartın əsas başlığı
             'course_id' => $rec['course_id'],
+            'stream_course_ids' => $rec['stream_course_ids'] ?? '', // Added for multi-filtering
             'course_name' => $rec['course_name'],
             'specialization_name' => $specName,
             'course_level' => $courseLvl,
@@ -810,10 +828,21 @@ require_once 'includes/header.php';
                 <?php foreach ($archivedLessons as $lesson): ?>
                     <?php
                     $isDoc = in_array($lesson['type'], ['pdf', 'material', 'quiz']);
+                    $courseIds = [$lesson['course_id']];
+                    if (!empty($lesson['stream_course_ids'])) {
+                        $sIds = explode(',', $lesson['stream_course_ids']);
+                        foreach ($sIds as $sid) {
+                            $sid = trim($sid);
+                            if (!empty($sid) && !in_array($sid, $courseIds)) {
+                                $courseIds[] = $sid;
+                            }
+                        }
+                    }
+                    $courseDataAttr = implode(',', $courseIds);
                     ?>
                     <div class="archive-card card p-0 overflow-hidden"
                         data-title="<?php echo strtolower(e($lesson['title'])); ?>"
-                        data-course="<?php echo $lesson['course_id']; ?>"
+                        data-course="<?php echo $courseDataAttr; ?>"
                         data-type="<?php echo $isDoc ? 'pdf' : 'video'; ?>"
                         style="background: var(--bg-white) !important; border-radius: 24px; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
                         <!-- Video Placeholder / Thumb -->
@@ -913,7 +942,7 @@ require_once 'includes/header.php';
                                 <?php endif; ?>
 
                                 <?php if ($lesson['is_live']): ?>
-                                    <a href="attendance_report.php?id=<?php echo $lesson['tmis_session_id'] ?? $lesson['db_id']; ?>"
+                                    <a href="attendance_report.php?id=<?php echo $lesson['local_live_id'] ?? $lesson['db_id']; ?>"
                                         class="btn btn-secondary"
                                         style="width: 48px; height: 48px; border-radius: 12px; padding: 0;" title="Hesabat">
                                         <i data-lucide="bar-chart-2" style="width: 20px;"></i>
@@ -1021,11 +1050,14 @@ require_once 'includes/header.php';
         const cid = document.getElementById('courseFilter').value;
         document.querySelectorAll('.archive-card').forEach(c => {
             const t = c.getAttribute('data-title');
-            const co = c.getAttribute('data-course');
+            const co = c.getAttribute('data-course'); // This is now a comma-separated list
             const tp = c.getAttribute('data-type');
+            
             const matchesSearch = t.includes(q);
-            const matchesCourse = (cid === 'all' || co === cid);
+            const courseIds = co.split(',');
+            const matchesCourse = (cid === 'all' || courseIds.includes(cid));
             const matchesType = (currentTypeFilter === 'all' || tp === currentTypeFilter);
+            
             c.style.display = (matchesSearch && matchesCourse && matchesType) ? 'block' : 'none';
         });
     }

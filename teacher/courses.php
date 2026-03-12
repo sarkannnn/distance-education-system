@@ -181,13 +181,13 @@ require_once 'includes/header.php';
                     <h1>Canlı Dərslər</h1>
                     <p>Tədris etdiyiniz bütün fənlər</p>
                 </div>
-                <!-- Course creation disabled as it syncs from TMIS -->
-                <?php /*
-<button class="btn btn-primary" onclick="openAddCourseModal()">
-<i data-lucide="plus"></i>
-Yeni Fənn
-</button>
-*/ ?>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <button class="btn" onclick="openStreamModal()"
+                        style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; border: none; font-weight: 600; padding: 10px 20px; border-radius: 12px; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25); transition: all 0.2s; cursor: pointer;">
+                        <i data-lucide="radio" style="width: 16px; height: 16px;"></i>
+                        Birləşdirilmiş Dərs Yarat
+                    </button>
+                </div>
             </div>
 
             <!-- Tab Navigation -->
@@ -922,4 +922,5 @@ Yeni Fənn
 </div>
 
 <?php require_once 'includes/modal_start_live.php'; ?>
+<?php require_once 'includes/modal_start_stream.php'; ?>
 <?php require_once 'includes/footer.php'; ?>

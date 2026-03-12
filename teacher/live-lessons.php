@@ -46,7 +46,7 @@ $upcomingLessons = [];
 
 // Lokal DB-dən aktiv dərsi axtar (əsas mənbə)
 try {
-    $localActiveSql = "SELECT lc.*, c.title as course_title 
+    $localActiveSql = "SELECT lc.*, c.title as course_title, lc.is_stream 
                        FROM live_classes lc 
                        LEFT JOIN courses c ON lc.course_id = c.id 
                        WHERE lc.status = 'live'";
@@ -475,6 +475,11 @@ require_once 'includes/header.php';
                         <div>
                             <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 12px;">Dərs:
                                 <?php echo e($activeLesson['title']); ?>
+                                <?php if (!empty($activeLesson['is_stream'])): ?>
+                                    <span style="background: rgba(124, 58, 237, 0.2); border: 1px solid rgba(124, 58, 237, 0.4); color: #7c3aed; padding: 2px 10px; border-radius: 8px; font-size: 13px; margin-left: 10px; font-weight: 600;">
+                                        🔗 Axın
+                                    </span>
+                                <?php endif; ?>
                             </h2>
                             <div style="display: flex; flex-direction: column; gap: 8px; opacity: 0.9;">
                                 <p style="font-size: 15px;">

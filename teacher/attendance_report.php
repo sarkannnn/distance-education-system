@@ -22,6 +22,11 @@ $lesson = $db->fetch("SELECT lc.*, c.title as course_title
                  LEFT JOIN courses c ON lc.course_id = c.id 
                  WHERE lc.id = :id1 OR lc.tmis_session_id = :id2", ['id1' => $lessonId, 'id2' => $lessonId]);
 if ($lesson) {
+    // CRITICAL: Normalize $lessonId to actual live_classes.id
+    // When accessed via tmis_session_id (e.g., ?id=92 finds lesson with id=150),
+    // all subsequent queries must use the real DB id (150) not the GET param (92)
+    $lessonId = $lesson['id'];
+
     // Map DB column names to expected variable names
     if (empty($lesson['specialization_name']) && !empty($lesson['specialty_name'])) {
         $lesson['specialization_name'] = $lesson['specialty_name'];
@@ -48,6 +53,7 @@ if ($lesson) {
         'title' => 'Mövzu təyin edilməyib',
         'lesson_type' => 'lecture',
         'specialization_name' => 'Təyin edilməyib',
+        'specialty_name' => 'Təyin edilməyib',
         'course_level' => 'Təyin edilməyib',
         'started_at' => $startTime,
         'start_time' => $startTime,
@@ -57,11 +63,14 @@ if ($lesson) {
     ];
 }
 
-// course_title boşdursa (course_id TMIS subject_id olduğu üçün local courses-da yoxdur) və ya ixtisas məlumatı yoxdursa TMIS-dən al
+// course_title boşdursa və ya ixtisas məlumatı yoxdursa TMIS-dən al
+$isStream = (int)($lesson['is_stream'] ?? 0);
 $needsTmisData = empty($lesson['course_title']) || 
                  trim($lesson['specialization_name']) === 'Təyin edilməyib' || 
+                 trim($lesson['specialization_name']) === 'Axın (çoxlu ixtisas)' ||
                  trim($lesson['course_level']) === 'Təyin edilməyib' || 
-                 trim($lesson['course_level']) === '-';
+                 trim($lesson['course_level']) === '-' ||
+                 ($isStream && (empty($lesson['specialty_name']) || $lesson['specialty_name'] === 'Axın (çoxlu ixtisas)'));
 
 if ($needsTmisData) {
     $tmisTokenForTitle = TmisApi::getToken();
@@ -70,15 +79,40 @@ if ($needsTmisData) {
             $subjectsList = TmisApi::getSubjectsList($tmisTokenForTitle);
             
             if ($subjectsList['success'] && !empty($subjectsList['data'])) {
+                $streamIds = array_filter(explode(',', $lesson['stream_course_ids'] ?? ''));
+                $resolvedNames = [];
+                $foundPrimary = false;
+
                 foreach ($subjectsList['data'] as $subj) {
                     $s_id = $subj['id'] ?? $subj['subject_id'] ?? 0;
-                    if ($s_id == $lesson['course_id']) {
+                    
+                    // Primary course check
+                    if (!$foundPrimary && $s_id == $lesson['course_id']) {
                         if (empty($lesson['course_title'])) {
                             $lesson['course_title'] = $subj['subject_name'] ?? $subj['name'] ?? '';
                         }
-                        $lesson['specialization_name'] = $subj['profession_name'] ?? 'Təyin edilməyib';
+                        if (!$isStream) {
+                            $lesson['specialization_name'] = $subj['profession_name'] ?? 'Təyin edilməyib';
+                        }
                         $lesson['course_level'] = isset($subj['course']) ? $subj['course'] . '-cü kurs' : 'Təyin edilməyib';
-                        break;
+                        $foundPrimary = true;
+                    }
+
+                    // Stream courses check
+                    if ($isStream && in_array($s_id, $streamIds)) {
+                        $resolvedNames[] = $subj['profession_name'] ?? ($subj['subject_name'] ?? 'Naməlum');
+                    }
+                }
+
+                if ($isStream && !empty($resolvedNames)) {
+                    $fullName = implode(', ', array_unique($resolvedNames));
+                    $lesson['specialization_name'] = $fullName;
+                    
+                    // Update database so other pages (Plan, Public Schedule) get the fix
+                    try {
+                        $db->query("UPDATE live_classes SET specialty_name = ? WHERE id = ?", [$fullName, $lesson['id']]);
+                    } catch (Exception $updateErr) {
+                        error_log("Failed to persist resolved specialty: " . $updateErr->getMessage());
                     }
                 }
             }
@@ -116,49 +150,58 @@ $attendeeLogs = $db->fetchAll(
     [$lessonId]
 );
 
-
-
 // --- 2. Build the Full Official Roster ---
 $roster = [];
+
+// Determine all applicable course IDs (Single or Stream)
+$subjectId = $lesson['course_id'];
+$isStream = (int)($lesson['is_stream'] ?? 0);
+$streamCourseIds = array_filter(explode(',', $lesson['stream_course_ids'] ?? ''));
+
+$allCourseIds = [$subjectId];
+if ($isStream && !empty($streamCourseIds)) {
+    $allCourseIds = array_unique(array_merge($allCourseIds, $streamCourseIds));
+}
+$allCourseIds = array_values($allCourseIds); // Important: Ensure sequential 0-indexed array for PDO
+
 $tmisToken = TmisApi::getToken();
 
 if ($tmisToken) {
     try {
-        $subjectId = $lesson['course_id'];
+        $sidMap = [];
+        $deptMap = []; // Map subject ID to department name
         
-        // Robustness: If course_id seems to be a mock lesson ID (matches lessonId), 
-        // try to find the real subject ID from TMIS or instructor's current teaching list.
-        if ($subjectId == $lessonId || $subjectId <= 0) {
-            // 1. Try to find from latest live class in local DB
-            $latestReal = $db->fetch("SELECT course_id FROM live_classes WHERE course_id != ? AND instructor_id = ? ORDER BY created_at DESC LIMIT 1", [$lessonId, $lesson['instructor_id']]);
-            if ($latestReal) {
-                $subjectId = $latestReal['course_id'];
-            } else {
-                // 2. Try to get first subject from TMIS list
-                $subjects = TmisApi::getSubjectsList($tmisToken);
-                if ($subjects['success'] && !empty($subjects['data'])) {
-                    $subjectId = $subjects['data'][0]['id'] ?? $subjects['data'][0]['subject_id'] ?? $subjectId;
+        // Populate deptMap from subjects list first for better naming
+        try {
+            $subs = TmisApi::getSubjectsList($tmisToken);
+            if ($subs['success'] && is_array($subs['data'])) {
+                foreach ($subs['data'] as $s) {
+                    $s_id = $s['id'] ?? ($s['subject_id'] ?? 0);
+                    if ($s_id) $deptMap[$s_id] = $s['profession_name'] ?? ($s['subject_name'] ?? ($s['name'] ?? 'Naməlum Bölmə'));
                 }
             }
-        }
+        } catch (Exception $e) {}
 
-        if ($subjectId > 0) {
-            $details = TmisApi::getSubjectDetails($tmisToken, (int)$subjectId);
+        foreach ($allCourseIds as $cId) {
+            if ($cId <= 0) continue;
+            
+            $details = TmisApi::getSubjectDetails($tmisToken, (int)$cId);
+            $currentDept = $deptMap[$cId] ?? ($details['data']['profession_name'] ?? ($details['data']['name'] ?? 'Naməlum Bölmə'));
+            
             if ($details['success'] && isset($details['data']['students']) && is_array($details['data']['students'])) {
-                if (!empty($details['data']['students'])) {
-                    file_put_contents('uploads/student_details_full_debug.log', "Keys: " . print_r(array_keys($details['data']['students'][0]), true) . "\nData: " . print_r($details['data']['students'][0], true));
-                }
-                $sidMap = [];
                 foreach ($details['data']['students'] as $s) {
                     $uid = $s['id'] ?? ($s['student_id'] ?? 0);
                     if (!$uid) continue;
                     
+                    if (isset($roster[$uid])) continue;
+
                     $roster[$uid] = [
                         'user_id' => $uid,
                         'first_name' => $s['first_name'] ?? ($s['name'] ?? ''),
                         'last_name' => $s['last_name'] ?? ($s['surname'] ?? ''),
                         'father_name' => $s['father_name'] ?? '',
                         'email' => $s['email'] ?? '',
+                        'department' => $currentDept,
                         'user_role' => 'student',
                         'first_join' => null,
                         'last_seen' => null,
@@ -177,22 +220,36 @@ if ($tmisToken) {
     }
 }
 
-// Fallback to local enrollment ONLY IF roster is still empty
-if (empty($roster)) {
-    $localRoster = $db->fetchAll("
-        SELECT u.id as user_id, u.first_name, u.last_name, u.email, u.role as user_role
-        FROM users u
-        JOIN enrollments e ON u.id = e.user_id
-        WHERE e.course_id = ?
-    ", [$lesson['course_id']]);
-    
-    foreach ($localRoster as $s) {
-        $roster[$s['user_id']] = array_merge($s, [
+// Fallback to local enrollment ONLY IF roster is still empty OR to supplement
+$coursePlaceholders = implode(',', array_fill(0, count($allCourseIds), '?'));
+$localRosterParams = $allCourseIds;
+
+$localRoster = $db->fetchAll("
+    SELECT u.id as user_id, u.first_name, u.last_name, u.email, u.role as user_role,
+           e.course_id, c.title as course_title
+    FROM users u
+    JOIN enrollments e ON u.id = e.user_id
+    LEFT JOIN courses c ON e.course_id = c.id
+    WHERE e.course_id IN ($coursePlaceholders)
+", $localRosterParams);
+
+foreach ($localRoster as $s) {
+    if (!isset($roster[$s['user_id']])) {
+        // Determine department name from deptMap (TMIS subjects) or course title
+        $deptName = $deptMap[$s['course_id']] ?? ($s['course_title'] ?? 'Ümumi');
+        
+        $roster[$s['user_id']] = [
+            'user_id' => $s['user_id'],
+            'first_name' => $s['first_name'],
+            'last_name' => $s['last_name'],
+            'email' => $s['email'],
+            'department' => $deptName,
+            'user_role' => $s['user_role'],
             'first_join' => null,
             'last_seen' => null,
             'total_seconds' => 0,
             'is_currently_online' => 0
-        ]);
+        ];
     }
 }
 
@@ -449,28 +506,48 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     
     // Attendance Table
     fputcsv($output, ['İSHTİRAKÇI JURNALI']);
-    fputcsv($output, ['№', 'Ad Soyad', 'E-poçt ünvanı', 'Vəzifə', 'Giriş Saatı', 'Son Görülmə', 'Müddət (dəq)', 'Faiz (%)', 'YEKUN NƏTİCƏ']);
     
-    $counter = 1;
+    // Group logs by department
+    $csvGroups = [];
     foreach ($logs as $log) {
-        $durationMin = floor($log['total_seconds'] / 60);
-        $progress = $baselineDuration > 0 ? round(($log['total_seconds'] / $baselineDuration) * 100) : 0;
-        $progress = min(100, $progress);
+        if ($log['user_role'] === 'instructor') continue;
+        $dept = $log['department'] ?? 'Ümumi';
+        $csvGroups[$dept][] = $log;
+    }
+
+    foreach ($csvGroups as $deptName => $deptLogs) {
+        fputcsv($output, []);
+        $deptTotal = count($deptLogs);
+        $deptAttended = 0;
+        foreach($deptLogs as $dl) {
+            $p = $baselineDuration > 0 ? round(($dl['total_seconds'] / $baselineDuration) * 100) : 0;
+            if ($p >= 50) $deptAttended++;
+        }
         
-        $finalStatus = ($progress >= 50) ? 'İştirak etdi' : 'Qayıb';
-        $role = $log['user_role'] == 'instructor' ? 'Müəllim' : 'Tələbə';
+        fputcsv($output, ["BÖLMƏ: $deptName ($deptAttended / $deptTotal)"]);
+        fputcsv($output, ['№', 'Ad Soyad', 'E-poçt ünvanı', 'Vəzifə', 'Giriş Saatı', 'Son Görülmə', 'Müddət (dəq)', 'Faiz (%)', 'YEKUN NƏTİCƏ']);
         
-        fputcsv($output, [
-            $counter++,
-            $log['last_name'] . ' ' . $log['first_name'] . (!empty($log['father_name']) ? ' ' . $log['father_name'] : ''),
-            $log['email'],
-            $role,
-            $log['first_join'] ? date('H:i', strtotime($log['first_join'])) : '--',
-            $log['last_seen'] ? date('H:i', strtotime($log['last_seen'])) : '--',
-            $durationMin,
-            $progress . '%',
-            $finalStatus
-        ]);
+        $counter = 1;
+        foreach ($deptLogs as $log) {
+            $durationMin = floor($log['total_seconds'] / 60);
+            $progress = $baselineDuration > 0 ? round(($log['total_seconds'] / $baselineDuration) * 100) : 0;
+            $progress = min(100, $progress);
+            
+            $finalStatus = ($progress >= 50) ? 'İştirak etdi' : 'Qayıb';
+            $role = 'Tələbə';
+            
+            fputcsv($output, [
+                $counter++,
+                $log['last_name'] . ' ' . $log['first_name'] . (!empty($log['father_name']) ? ' ' . $log['father_name'] : ''),
+                $log['email'],
+                $role,
+                $log['first_join'] ? date('H:i', strtotime($log['first_join'])) : '--',
+                $log['last_seen'] ? date('H:i', strtotime($log['last_seen'])) : '--',
+                $durationMin,
+                $progress . '%',
+                $finalStatus
+            ]);
+        }
     }
     
     fputcsv($output, []);
@@ -691,80 +768,147 @@ require_once 'includes/header.php';
                                 <th class="print-only-hide" style="padding: 12px 10px;">Status</th>
                             </tr>
                         </thead>
-                        <tbody style="font-size: 14px; color: #334155;">
+                        <tbody>
                             <?php if (empty($logs)): ?>
                                 <tr>
-                                    <td colspan="5" style="padding: 60px; text-align: center; color: #94a3b8;">
-                                        <div style="font-size: 40px; margin-bottom: 10px; opacity: 0.3;">📭</div>
-                                        <div style="font-weight: 600;">İştirakçı qeydə alınmayıb</div>
+                                    <td colspan="8" style="padding: 40px; text-align: center; color: #94a3b8;">
+                                        <div style="font-size: 40px; margin-bottom: 10px;">📄</div>
+                                        <div style="font-weight: 600;">İştirakçı məlumatı tapılmadı</div>
                                     </td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($logs as $log): ?>
-                                    <?php
-                                    $fullName = ($log['last_name'] ?? '') . ' ' . ($log['first_name'] ?? '') . (!empty($log['father_name']) ? ' ' . $log['father_name'] : '');
-                                    $durationMin = floor($log['total_seconds'] / 60);
-                                    $progress = $baselineDuration > 0 ? round(($log['total_seconds'] / $baselineDuration) * 100) : 0;
-                                    $progress = min(100, $progress); 
-                                    ?>
-                                    <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#fcfcfd'" onmouseout="this.style.background='white'">
-                                        <td style="padding: 12px 10px;">
-                                            <div style="display: flex; align-items: center; gap: 10px;">
-                                                <div style="width: 32px; height: 32px; background: #eff6ff; color: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">
-                                                    <?php echo strtoupper(substr($log['first_name'], 0, 1)); ?>
-                                                </div>
-                                                <div style="min-width: 0; page-break-inside: avoid; break-inside: avoid;">
-                                                    <div style="font-weight: 700; color: #1e293b; font-size: 13px; word-break: break-word;"><?php echo e($fullName); ?></div>
-                                                    <div style="font-size: 11px; color: #94a3b8; word-break: break-all;"><?php echo e($log['email']); ?></div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style="padding: 12px 10px;">
-                                            <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: <?php echo $log['user_role'] == 'instructor' ? '#3b82f6' : '#64748b'; ?>; background: <?php echo $log['user_role'] == 'instructor' ? '#eff6ff' : '#f1f5f9'; ?>; padding: 3px 8px; border-radius: 5px;">
-                                                <?php echo $log['user_role'] == 'instructor' ? 'Müəllim' : 'Tələbə'; ?>
-                                            </span>
-                                        </td>
-                                        <td style="padding: 12px 10px; font-weight: 700; color: #10b981; font-size: 12px;">
-                                            <?php echo $log['first_join'] ? date('H:i', strtotime($log['first_join'])) : '--'; ?>
-                                        </td>
-                                        <td style="padding: 12px 10px; font-weight: 600; color: #64748b; font-size: 12px;">
-                                            <?php echo $log['last_seen'] ? date('H:i', strtotime($log['last_seen'])) : '--'; ?>
-                                        </td>
-                                        <td style="padding: 12px 10px; font-weight: 700; color: #1e293b; font-size: 13px;">
-                                            <?php echo $durationMin; ?> <span style="font-size: 11px; font-weight: 500; color: #94a3b8;">dəq.</span>
-                                        </td>
-                                        <td style="padding: 12px 10px;">
-                                            <div style="display: flex; align-items: center; gap: 6px;">
-                                                <div style="width: 40px; height: 5px; background: #f1f5f9; border-radius: 10px; overflow: hidden; flex-shrink: 0;">
-                                                    <div style="height: 100%; background: #3b82f6; width: <?php echo $progress; ?>%;"></div>
-                                                </div>
-                                                <span style="font-size: 11px; font-weight: 700; color: #3b82f6;"><?php echo $progress; ?>%</span>
-                                            </div>
-                                        </td>
-                                        <td style="padding: 12px 10px;">
-                                            <?php if ($log['user_role'] === 'instructor'): ?>
-                                                <span style="color: #94a3b8; font-size: 11px;">--</span>
-                                            <?php elseif ($progress >= 50): ?>
-                                                <span style="background: #10b981; color: white; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
-                                                    ✅ İştirak
-                                                </span>
-                                            <?php else: ?>
-                                                <span style="background: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);">
-                                                    ❌ Qayıb
-                                                </span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="print-only-hide" style="padding: 12px 10px;">
-                                            <?php if ($log['is_currently_online']): ?>
-                                                <div style="display: flex; align-items: center; gap: 4px;">
-                                                    <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></span>
-                                                    <span style="font-size: 10px; font-weight: 700; color: #059669; text-transform: uppercase;">Canlı</span>
-                                                </div>
-                                            <?php else: ?>
-                                                <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Ayrılıb</span>
-                                            <?php endif; ?>
+                                <?php
+                                $instructors = [];
+                                $groupedByDept = [];
+                                foreach ($logs as $log) {
+                                    if ($log['user_role'] === 'instructor') {
+                                        $instructors[] = $log;
+                                    } else {
+                                        $dept = $log['department'] ?? 'Ümumi';
+                                        $groupedByDept[$dept][] = $log;
+                                    }
+                                }
+                                ksort($groupedByDept);
+                                ?>
+
+                                <?php if (!empty($instructors)): ?>
+                                    <tr style="background: #eff6ff; border-bottom: 2px solid #dbeafe;">
+                                        <td colspan="8" style="padding: 15px 20px; font-weight: 850; color: #1e40af; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">
+                                            🎓 MÜƏLLİMLƏR
                                         </td>
                                     </tr>
+                                    <?php foreach ($instructors as $log): ?>
+                                        <?php
+                                        $fullName = ($log['last_name'] ?? '') . ' ' . ($log['first_name'] ?? '') . (!empty($log['father_name']) ? ' ' . $log['father_name'] : '');
+                                        ?>
+                                        <tr style="border-bottom: 1px solid #f1f5f9; background: #fdfdff;">
+                                            <td style="padding: 12px 10px;">
+                                                <div style="display: flex; align-items: center; gap: 10px;">
+                                                    <div style="width: 32px; height: 32px; background: #3b82f6; color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">
+                                                        <?php echo strtoupper(substr($log['first_name'], 0, 1)); ?>
+                                                    </div>
+                                                    <div>
+                                                        <div style="font-weight: 700; color: #1e293b; font-size: 13px;"><?php echo e($fullName); ?></div>
+                                                        <div style="font-size: 11px; color: #94a3b8;"><?php echo e($log['email']); ?></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="padding: 12px 10px;">
+                                                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: #3b82f6; background: #eff6ff; padding: 3px 8px; border-radius: 5px;">Müəllim</span>
+                                            </td>
+                                            <td style="padding: 12px 10px; font-weight: 700; color: #3b82f6; font-size: 12px;">--</td>
+                                            <td style="padding: 12px 10px; font-weight: 600; color: #94a3b8; font-size: 12px;">--</td>
+                                            <td style="padding: 12px 10px; font-weight: 700; color: #1e293b; font-size: 13px;">--</td>
+                                            <td style="padding: 12px 10px;"><span style="color: #94a3b8; font-size: 11px;">--</span></td>
+                                            <td style="padding: 12px 10px;"><span style="color: #94a3b8; font-size: 11px;">--</span></td>
+                                            <td class="print-only-hide" style="padding: 12px 10px;">--</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+
+                                <?php foreach ($groupedByDept as $deptName => $deptLogs): ?>
+                                    <!-- Department Header Row -->
+                                    <?php 
+                                        $deptTotal = count($deptLogs);
+                                        $deptAttended = 0;
+                                        foreach($deptLogs as $dl) {
+                                            $p = $baselineDuration > 0 ? round(($dl['total_seconds'] / $baselineDuration) * 100) : 0;
+                                            if ($p >= 50) $deptAttended++;
+                                        }
+                                    ?>
+                                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                        <td colspan="8" style="padding: 15px 20px; font-weight: 850; color: #1e293b; text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <span>📂 <?php echo e($deptName); ?></span>
+                                                <span style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px;"><?php echo $deptAttended; ?> / <?php echo $deptTotal; ?> nəfər</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    
+                                    <?php foreach ($deptLogs as $log): ?>
+                                        <?php
+                                        $fullName = ($log['last_name'] ?? '') . ' ' . ($log['first_name'] ?? '') . (!empty($log['father_name']) ? ' ' . $log['father_name'] : '');
+                                        $durationMin = floor($log['total_seconds'] / 60);
+                                        $progress = $baselineDuration > 0 ? round(($log['total_seconds'] / $baselineDuration) * 100) : 0;
+                                        $progress = min(100, $progress); 
+                                        ?>
+                                        <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#fcfcfd'" onmouseout="this.style.background='white'">
+                                            <td style="padding: 12px 10px;">
+                                                <div style="display: flex; align-items: center; gap: 10px;">
+                                                    <div style="width: 32px; height: 32px; background: #eff6ff; color: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">
+                                                        <?php echo strtoupper(substr($log['first_name'], 0, 1)); ?>
+                                                    </div>
+                                                    <div style="min-width: 0; page-break-inside: avoid; break-inside: avoid;">
+                                                        <div style="font-weight: 700; color: #1e293b; font-size: 13px; word-break: break-word;"><?php echo e($fullName); ?></div>
+                                                        <div style="font-size: 11px; color: #94a3b8; word-break: break-all;"><?php echo e($log['email']); ?></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="padding: 12px 10px;">
+                                                <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 5px;">
+                                                    Tələbə
+                                                </span>
+                                            </td>
+                                            <td style="padding: 12px 10px; font-weight: 700; color: #10b981; font-size: 12px;">
+                                                <?php echo $log['first_join'] ? date('H:i', strtotime($log['first_join'])) : '--'; ?>
+                                            </td>
+                                            <td style="padding: 12px 10px; font-weight: 600; color: #64748b; font-size: 12px;">
+                                                <?php echo $log['last_seen'] ? date('H:i', strtotime($log['last_seen'])) : '--'; ?>
+                                            </td>
+                                            <td style="padding: 12px 10px; font-weight: 700; color: #1e293b; font-size: 13px;">
+                                                <?php echo $durationMin; ?> <span style="font-size: 11px; font-weight: 500; color: #94a3b8;">dəq.</span>
+                                            </td>
+                                            <td style="padding: 12px 10px;">
+                                                <div style="display: flex; align-items: center; gap: 6px;">
+                                                    <div style="width: 40px; height: 5px; background: #f1f5f9; border-radius: 10px; overflow: hidden; flex-shrink: 0;">
+                                                        <div style="height: 100%; background: #3b82f6; width: <?php echo $progress; ?>%;"></div>
+                                                    </div>
+                                                    <span style="font-size: 11px; font-weight: 700; color: #3b82f6;"><?php echo $progress; ?>%</span>
+                                                </div>
+                                            </td>
+                                            <td style="padding: 12px 10px;">
+                                                <?php if ($progress >= 50): ?>
+                                                    <span style="background: #10b981; color: white; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">
+                                                        ✅ İştirak
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span style="background: #ef4444; color: white; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);">
+                                                        ❌ Qayıb
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="print-only-hide" style="padding: 12px 10px;">
+                                                <?php if ($log['is_currently_online']): ?>
+                                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                                        <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></span>
+                                                        <span style="font-size: 10px; font-weight: 700; color: #059669; text-transform: uppercase;">Canlı</span>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <span style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">Ayrılıb</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </tbody>

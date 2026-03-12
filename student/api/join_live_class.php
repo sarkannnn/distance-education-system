@@ -11,8 +11,18 @@ if (isset($_GET['id'])) {
     $live_class_id = $_GET['id'];
 
     try {
-        // 1. Dərsi bazadan tap
-        $class = $db->fetch("SELECT lc.zoom_link, lc.title, lc.course_id FROM live_classes lc WHERE lc.id = ?", [$live_class_id]);
+        // 0. Ban/Kick yoxlaması - Əgər tələbə dərsdən uzaqlaşdırılıbsa, yenidən girə bilməz
+        $kickCheck = $db->fetch(
+            "SELECT id FROM live_attendance WHERE live_class_id = ? AND user_id = ? AND is_kicked = 1 ORDER BY id DESC LIMIT 1",
+            [$live_class_id, $user['id']]
+        );
+        if ($kickCheck) {
+            header('Location: ../live-classes.php?error=kicked');
+            exit;
+        }
+
+        // 1. Dərsi bazadan tap - Axın dərsi məlumatları daxil olmaqla
+        $class = $db->fetch("SELECT lc.zoom_link, lc.title, lc.course_id, lc.is_stream, lc.stream_course_ids FROM live_classes lc WHERE lc.id = ?", [$live_class_id]);
 
         if ($class && !empty($class['zoom_link'])) {
             // 2. İştirakı qeyd et
@@ -45,16 +55,33 @@ if (isset($_GET['id'])) {
                     }
 
                     if ($studentColumn && $studentValue) {
+                        // Axın dərsi (Stream/Patok) məsələsi:
+                        // Tələbənin hansı fənn/ixtisas üzrə qeydiyyatda olduğunu müəyyən etməliyik.
+                        $targetCourseId = $class['course_id'];
+                        
+                        if (!empty($class['is_stream']) && !empty($class['stream_course_ids'])) {
+                            $streamIds = explode(',', $class['stream_course_ids']);
+                            // Tələbənin bu axındakı fənlərdən hansına qeydiyyatlı olduğunu tap
+                            $placeholders = implode(',', array_fill(0, count($streamIds), '?'));
+                            $enrollCheck = $db->fetch(
+                                "SELECT course_id FROM enrollments WHERE {$studentColumn} = ? AND course_id IN ($placeholders) LIMIT 1",
+                                array_merge([$studentValue], $streamIds)
+                            );
+                            if ($enrollCheck) {
+                                $targetCourseId = $enrollCheck['course_id'];
+                            }
+                        }
+
                         // Check if already enrolled
                         $enrolled = $db->fetch(
                             "SELECT id FROM enrollments WHERE {$studentColumn} = ? AND course_id = ?",
-                            [$studentValue, $class['course_id']]
+                            [$studentValue, $targetCourseId]
                         );
 
                         if (!$enrolled) {
                             // Build dynamic INSERT
                             $insertColumns = [$studentColumn, 'course_id'];
-                            $insertValues = [$studentValue, $class['course_id']];
+                            $insertValues = [$studentValue, $targetCourseId];
 
                             // Add date column if exists
                             $dateColumns = ['enrollment_date', 'enrolled_at', 'created_at', 'date'];
