@@ -13,7 +13,6 @@ function initApp() {
     initSearch();
     initFilters();
     initNotifications();
-    initToggleSwitches();
     initMobileSidebar();
     initTheme();
     initLiveAlerts();
@@ -329,40 +328,6 @@ function updateNotificationBadge(count) {
     }
 }
 
-/**
- * Toggle Switches
- */
-function initToggleSwitches() {
-    const toggles = document.querySelectorAll('.toggle-switch input');
-
-    toggles.forEach(toggle => {
-        toggle.addEventListener('change', function () {
-            const setting = this.dataset.setting;
-            const value = this.checked;
-
-            updateSetting(setting, value);
-        });
-    });
-}
-
-async function updateSetting(setting, value) {
-    try {
-        const response = await fetch('api/settings.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ setting, value })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showToast('Parametr yeniləndi', 'success');
-        }
-    } catch (error) {
-        console.error('Settings error:', error);
-        showToast('Xəta baş verdi', 'error');
-    }
-}
 
 /**
  * Mobile Sidebar

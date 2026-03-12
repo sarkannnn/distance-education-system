@@ -8,7 +8,6 @@ $menuItems = [
     ['id' => 'dashboard', 'label' => 'İdarəetmə Paneli', 'icon' => 'home', 'url' => './'],
     ['id' => 'live', 'label' => 'Canlı Dərslər', 'icon' => 'video', 'url' => 'live-classes.php'],
     ['id' => 'archive', 'label' => 'Arxiv və Resurslar', 'icon' => 'folder-archive', 'url' => 'archive.php'],
-    ['id' => 'settings', 'label' => 'Parametrlər', 'icon' => 'settings', 'url' => 'settings.php'],
 ];
 
 $currentPage = $currentPage ?? 'dashboard';
