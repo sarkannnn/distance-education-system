@@ -781,7 +781,7 @@ require_once 'includes/header.php';
             <div class="card mb-10"
                 style="padding: 24px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--gray-50);">
                 <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
-                    <div style="position: relative; flex: 1; min-width: 300px;">
+                    <div style="position: relative; flex: 1; min-width: 250px;">
                         <i data-lucide="search"
                             style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
                         <input type="text" id="archiveSearch" placeholder="Dərs, fənn və ya material axtar..."
@@ -814,11 +814,11 @@ require_once 'includes/header.php';
                     </div>
 
                     <select id="courseFilter" class="form-input"
-                        style="width: auto; min-width: 220px; height: 55px; border-radius: 15px;"
+                        style="width: auto; min-width: 180px; height: 55px; border-radius: 15px; max-width: 100%;"
                         onchange="filterArchives()">
                         <option value="all">Bütün fənlər</option>
                         <?php foreach ($courses as $c): ?>
-                            <option value="<?php echo $c['id']; ?>"><?php echo e($c['title']); ?></option>
+                            <option value="<?php echo $c['id']; ?>"><?php echo e(truncate($c['title'])); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>

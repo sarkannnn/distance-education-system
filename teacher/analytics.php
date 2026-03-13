@@ -84,7 +84,7 @@ try {
             COUNT(*) as total_lessons,
             COUNT(CASE WHEN lc.lesson_type = 'lecture' THEN 1 END) as lecture_count,
             COUNT(CASE WHEN lc.lesson_type = 'seminar' THEN 1 END) as seminar_count,
-            COUNT(CASE WHEN lc.lesson_type = 'lab' THEN 1 END) as lab_count
+            COUNT(CASE WHEN lc.lesson_type = 'laboratory' THEN 1 END) as lab_count
         FROM live_classes lc
         WHERE {$whereLP}
         GROUP BY lc.course_id
@@ -469,15 +469,23 @@ require_once 'includes/header.php';
                     </div>
 
                     <div
-                        style="height: 240px; background: var(--gray-50); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 18px; border: 1px solid var(--border-color);">
+                        style="min-height: 240px; background: var(--gray-50); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 18px; border: 1px solid var(--border-color);">
                         <?php if (empty($coursePerformance)): ?>
                             <p style="text-align: center; color: #94A3B8; margin-top: 40px;">Məlumat yoxdur</p>
                         <?php else: ?>
                             <?php foreach (array_slice($coursePerformance, 0, 4) as $cp): ?>
                                 <div>
                                     <div class="flex justify-between mb-2">
-                                        <span
-                                            style="font-size: 13px; font-weight: 600; color: var(--text-primary);"><?php echo $cp['course']; ?></span>
+                                        <div style="display: flex; flex-direction: column; overflow: hidden; white-space: nowrap;">
+                                            <span style="font-size: 13px; font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden;" title="<?php echo htmlspecialchars($cp['course']); ?>">
+                                                <?php echo htmlspecialchars($cp['course']); ?>
+                                            </span>
+                                            <?php if (!empty($cp['profession_name'])): ?>
+                                                <span style="font-size: 11px; font-weight: 500; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; margin-top: 2px;" title="<?php echo htmlspecialchars($cp['profession_name']); ?>">
+                                                    <?php echo htmlspecialchars($cp['profession_name']); ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                         <span
                                             style="font-size: 13px; font-weight: 800; color: #3B82F6;"><?php echo $cp['attendance']; ?>%
                                             <small
@@ -526,9 +534,6 @@ require_once 'includes/header.php';
                                 <th
                                     style="text-align: left; padding: 18px 15px; width: 15%; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">
                                     Davamiyyət</th>
-                                <th
-                                    style="text-align: center; padding: 18px 30px; width: 10%; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em;">
-                                    Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -632,27 +637,6 @@ require_once 'includes/header.php';
                                                     </div>
                                                 </div>
                                             </div>
-                                        </td>
-
-                                        <td style="padding: 20px 30px; text-align: center;">
-                                            <?php
-                                            $badgeStyle = "background: #FEE2E2; color: #EF4444;";
-                                            $text = "Kritik";
-                                            if ($cp['status'] === 'Əla') {
-                                                $badgeStyle = "background: #DCFCE7; color: #059669;";
-                                                $text = "Əla";
-                                            } elseif ($cp['status'] === 'Yaxşı') {
-                                                $badgeStyle = "background: #DBEAFE; color: #2563EB;";
-                                                $text = "Yaxşı";
-                                            } elseif ($cp['status'] === 'Normal') {
-                                                $badgeStyle = "background: #FEF3C7; color: #D97706;";
-                                                $text = "Normal";
-                                            }
-                                            ?>
-                                            <span
-                                                style="padding: 6px 12px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; <?php echo $badgeStyle; ?>">
-                                                <?php echo $text; ?>
-                                            </span>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

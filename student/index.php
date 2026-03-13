@@ -109,12 +109,17 @@ if ($tmisStats) {
 //  2. BU GÜNÜN CƏDVƏLİ
 //     API: GET /api/student/schedule/today
 // =========================================================================
+// CHANGE: Show only currently live lessons in "Today's Schedule"
+// Remove random/sample lessons and filter the list to include only lessons where $isLive === true.
+// If no live lesson exists, display the message: "Hazırda aktiv onlayn dərs yoxdur."
 $todaySchedule = [];
 
 $tmisToday = tmis_get('/student/schedule/today');
 if ($tmisToday && is_array($tmisToday)) {
     foreach ($tmisToday as $item) {
         $isLive = (!empty($item['live_class_id']) || ($item['status'] ?? '') === 'in-progress');
+        if (!$isLive) continue;
+        
         $startTime = $item['start_time'] ?? '10:00';
         $endTime = $item['end_time'] ?? '11:30';
 
@@ -167,6 +172,8 @@ if ($tmisToday && is_array($tmisToday)) {
             }
 
             $isLive = !empty($row['live_class_id']) && $row['live_status'] === 'live';
+            if (!$isLive) continue;
+
             $startTime = $row['start_time'] ? date('H:i', strtotime($row['start_time'])) : '10:00';
             $endTime = $row['start_time'] ? date('H:i', strtotime($row['start_time'] . ' +90 minutes')) : '11:30';
 
@@ -350,11 +357,10 @@ require_once 'includes/header.php';
                             <div style="padding: 40px 20px; text-align: center;">
                                 <div
                                     style="width: 60px; height: 60px; background: var(--gray-50); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                                    <i data-lucide="calendar-off"
+                                    <i data-lucide="video-off"
                                         style="width: 28px; height: 28px; color: var(--text-muted);"></i>
                                 </div>
-                                <p style="color: var(--text-muted); font-size: 14px;">Bu gün üçün hələ ki, heç bir
-                                    fəaliyyət planlaşdırılmayıb.</p>
+                                <p style="color: var(--text-muted); font-size: 14px;">Hazırda aktiv onlayn dərs yoxdur.</p>
                             </div>
                         <?php else: ?>
                             <?php foreach ($todaySchedule as $lesson):
@@ -367,24 +373,17 @@ require_once 'includes/header.php';
                                     style="<?php echo $isLive ? 'display: block; text-decoration: none; border-left: 4px solid var(--error);' : ''; ?>">
                                     <div class="flex items-center justify-between">
                                         <div>
-                                            <div class="schedule-time">
-                                                <i data-lucide="clock"></i>
-                                                <span>
-                                                    <?php echo $lesson['time']; ?>
-                                                </span>
-                                                <?php if ($isLive): ?>
+                                            <?php if ($isLive): ?>
+                                                <div class="schedule-time" style="margin-bottom: 8px;">
                                                     <span class="badge badge-live">
                                                         <i data-lucide="video"></i>
                                                         Canlı
                                                     </span>
-                                                <?php endif; ?>
-                                            </div>
-                                            <h3 class="schedule-title">
+                                                </div>
+                                            <?php endif; ?>
+                                            <h3 class="schedule-title" style="margin-bottom: 0;">
                                                 <?php echo e($lesson['course']); ?>
                                             </h3>
-                                            <p class="schedule-instructor">
-                                                <?php echo e($lesson['instructor']); ?>
-                                            </p>
                                         </div>
                                         <div>
                                             <?php if ($lesson['status'] === 'completed'): ?>

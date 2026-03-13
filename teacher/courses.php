@@ -122,6 +122,12 @@ if ($tmisToken) {
                 $statusRaw = 'active';
                 $isDue = false;
 
+                $groupName = $cs['class_name'] ?? '';
+                $specializationDisplay = $professionName;
+                if (!empty($groupName)) {
+                    $specializationDisplay .= ' (' . $groupName . ')';
+                }
+
                 $courses[] = [
                     'id' => $courseId,
                     'tmis_subject_id' => $courseId,
@@ -148,7 +154,7 @@ if ($tmisToken) {
                     'status' => $statusLabel,
                     'status_raw' => $statusRaw,
                     'category' => $sectorName,
-                    'specialization' => $professionName,
+                    'specialization' => $specializationDisplay,
                     'is_due' => $isDue,
                     'attendance' => 0
                 ];
@@ -176,7 +182,7 @@ require_once 'includes/header.php';
     <main class="main-content">
         <div class="content-container">
             <!-- Page Header -->
-            <div class="page-header flex justify-between items-center mb-6">
+            <div class="page-header flex justify-between items-center mb-6" style="flex-wrap: wrap; gap: 16px;">
                 <div>
                     <h1>Canlı Dərslər</h1>
                     <p>Tədris etdiyiniz bütün fənlər</p>

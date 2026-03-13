@@ -438,6 +438,13 @@ require_once 'includes/header.php';
                     border-bottom: 2px solid #e5e7eb;
                     margin-bottom: 24px;
                     gap: 32px;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                }
+                .nav-tabs::-webkit-scrollbar { display: none; }
+                .nav-tab {
+                    white-space: nowrap;
                 }
 
                 .nav-tab {
@@ -468,7 +475,7 @@ require_once 'includes/header.php';
             </div>
 
             <!-- Main Live Lesson Card -->
-            <div class="gradient-stat blue" style="padding: 32px; border-radius: 20px;">
+            <div class="gradient-stat blue" style="padding: 24px; border-radius: 20px;">
                 <div
                     class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 <?php echo (!$activeLesson && !empty($upcomingLessons)) ? 'border-b border-white/20' : ''; ?>">
                     <?php if ($activeLesson): ?>
@@ -560,10 +567,10 @@ require_once 'includes/header.php';
                                 <div class="form-group">
                                     <label>Hədəf Kütlə (Fənn)</label>
                                     <select name="course_id" class="form-input"
-                                        style="border-radius: 12px; height: 50px;">
+                                        style="border-radius: 12px; height: 50px; max-width: 100%;">
                                         <option value="">Bütün tələbələr</option>
                                         <?php foreach ($instructorCourses as $c): ?>
-                                            <option value="<?php echo $c['id']; ?>"><?php echo e($c['title']); ?></option>
+                                            <option value="<?php echo $c['id']; ?>"><?php echo e(truncate($c['title'])); ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>

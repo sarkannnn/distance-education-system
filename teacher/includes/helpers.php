@@ -175,6 +175,17 @@ function getMonths()
     ];
 }
 /**
+ * Mətni müəyyən uzunluğa qədər qısalt
+ */
+function truncate($text, $length = 45)
+{
+    if (mb_strlen($text, 'UTF-8') <= $length) {
+        return $text;
+    }
+    return mb_substr($text, 0, $length, 'UTF-8') . '...';
+}
+
+/**
  * JSON Response helper
  */
 function jsonResponse($data, $statusCode = 200)

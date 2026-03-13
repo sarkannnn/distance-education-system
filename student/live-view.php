@@ -262,42 +262,199 @@ require_once 'includes/header.php';
         display: none;
         z-index: 2020;
     }
+
+    /* Responsive Studio Layout */
+    .studio-container {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    #videoContainer {
+        width: 100%;
+        max-width: 100%;
+        aspect-ratio: 16/9;
+        position: relative;
+        background: #000;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255,255,255,0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Mobile chat toggle — hidden on desktop */
+    .mobile-chat-toggle {
+        display: none;
+    }
+    .mobile-panel-close-student {
+        display: none;
+    }
+
+    @media (max-width: 1024px) {
+        .mobile-chat-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .mobile-chat-toggle.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .studio-container {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .studio-sidebar {
+            display: none !important;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 500;
+            height: 55vh !important;
+            max-height: 55vh;
+            border-left: none !important;
+            border-top: 2px solid #334155 !important;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            overflow-y: auto !important;
+            min-height: unset !important;
+        }
+
+        .studio-sidebar.mobile-open {
+            display: flex !important;
+            animation: mobileSlideUpStudent 0.3s ease-out;
+        }
+
+        @keyframes mobileSlideUpStudent {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .mobile-panel-close-student {
+            display: flex !important;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 510;
+        }
+
+        #videoContainer {
+            border-radius: 12px !important;
+            height: auto !important;
+            min-height: 200px;
+        }
+
+        .video-screen-area {
+            padding: 8px !important;
+        }
+
+        #overlay h2 {
+            font-size: 20px !important;
+        }
+
+        #joinBtn {
+            padding: 15px 40px !important;
+            font-size: 18px !important;
+        }
+
+        #localControlsWrapper {
+            bottom: 15px !important;
+            left: 15px !important;
+        }
+
+        #localPreview {
+            width: 100px !important;
+            height: 70px !important;
+        }
+
+        /* Compact local control buttons */
+        #localControlsWrapper > div:last-child {
+            padding: 10px 15px !important;
+            gap: 12px !important;
+        }
+
+        #localControlsWrapper button {
+            width: 38px !important;
+            height: 38px !important;
+        }
+
+        #localControlsWrapper span {
+            font-size: 7px !important;
+        }
+    }
+
+    @media (max-width: 600px) {
+        #localPreview {
+            width: 80px !important;
+            height: 55px !important;
+        }
+    }
 </style>
 
 <div class="main-wrapper"
     style="margin: 0; padding: 0; background: #0f172a; height: 100vh; color: white; display: flex; flex-direction: column; overflow: hidden;">
     <!-- STUDIO HEADER -->
-    <div
-        style="height: 65px; min-height: 65px; padding: 0 30px; background: #1e293b; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; z-index: 100;">
-        <div style="display: flex; align-items: center; gap: 15px;">
+    <div style="height: 55px; min-height: 55px; padding: 0 15px; background: #1e293b; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; z-index: 100; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 1;">
             <div
-                style="width: 12px; height: 12px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 10px #ef4444; animation: blink 1s infinite;">
+                style="width: 10px; height: 10px; min-width: 10px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 10px #ef4444; animation: blink 1s infinite;">
             </div>
-            <h1 style="font-size: 16px; margin: 0; font-weight: 700;">
+            <h1 style="font-size: 14px; margin: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 <?php echo e($lesson['course_title']); ?> <span
-                    style="opacity: 0.5; margin-left: 8px; font-weight: 400;">#<?php echo $lessonId; ?></span>
+                    style="opacity: 0.5; margin-left: 6px; font-weight: 400;">#<?php echo $lessonId; ?></span>
             </h1>
         </div>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
             <span id="connectionStatus"
-                style="font-size: 12px; color: #94a3b8; font-family: monospace;">Gözlənilir...</span>
+                style="font-size: 11px; color: #94a3b8; font-family: monospace; display: none;">Gözlənilir...</span>
+            <button class="mobile-chat-toggle" onclick="toggleStudentChat()" id="mobileChatToggle">
+                💬 Çat
+            </button>
             <button onclick="leaveLesson()" class="btn btn-danger btn-sm"
-                style="background: #ef4444; border: none; color: white; font-weight: 700; padding: 8px 20px; border-radius: 10px;">Canlı
-                Dərsdən Ayrıl</button>
+                style="background: #ef4444; border: none; color: white; font-weight: 700; padding: 7px 16px; border-radius: 10px; font-size: 12px; white-space: nowrap;">Ayrıl</button>
         </div>
     </div>
 
     <!-- MAIN STUDIO AREA -->
-    <div style="display: grid; grid-template-columns: 1fr 380px; flex: 1; min-height: 0; overflow: hidden;">
+    <div class="studio-container">
         <!-- LEFT: VIDEO SCREEN -->
-        <div
+        <div class="video-screen-area"
             style="position: relative; background: #020617; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; padding: 20px; min-height: 0;">
 
-            <div id="videoContainer"
-                style="width: 100%; max-height: 100%; aspect-ratio: 16/9; position: relative; background: #000; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;">
+            <div id="videoContainer">
 
                 <!-- REMOTE VIDEO (Müəllim) -->
-                <video id="remVid" autoplay playsinline
+                <video id="remVid" autoplay playsinline webkit-playsinline muted
                     style="width: 100%; height: 100%; object-fit: contain; background: #000;"></video>
 
                 <!-- UNMUTE FALLBACK -->
@@ -418,8 +575,9 @@ require_once 'includes/header.php';
         </div>
 
         <!-- RIGHT: SIDEBAR (CHAT & PARTICIPANTS) -->
-        <div
-            style="background: #1e293b; border-left: 2px solid #334155; display: flex; flex-direction: column; overflow: hidden; padding: 25px;">
+        <div class="studio-sidebar" id="studentChatPanel"
+            style="background: #1e293b; border-left: 2px solid #334155; display: flex; flex-direction: column; overflow: hidden; padding: 25px; position: relative;">
+            <button class="mobile-panel-close-student" onclick="toggleStudentChat()">&times;</button>
 
             <!-- CHAT AREA -->
             <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
@@ -539,6 +697,16 @@ require_once 'includes/header.php';
 
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
+    // === Mobile Chat Toggle ===
+    function toggleStudentChat() {
+        const panel = document.getElementById('studentChatPanel');
+        const btn = document.getElementById('mobileChatToggle');
+        if (panel) {
+            panel.classList.toggle('mobile-open');
+            if (btn) btn.classList.toggle('active', panel.classList.contains('mobile-open'));
+        }
+    }
+
     const lID = "<?php echo $lessonId; ?>";
     const uName = "<?php echo e($uName); ?>";
     const uID = "<?php echo $currentUser['id']; ?>";
@@ -1042,6 +1210,13 @@ require_once 'includes/header.php';
     };
 
     function tryConnect(useCloud = false) {
+        // Optimization: If NOT localhost and NOT a local IP, default to cloud immediately
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('192.168.');
+        if (!isLocal && !useCloud) {
+            DBG("🌐 Mobil/Uzaq bağlantı aşkar edildi. Buluda keçid edilir...");
+            return tryConnect(true);
+        }
+
         DBG("Sinyal serverinə qoşulur...");
         const config = useCloud ? {
             debug: 1,
@@ -1322,6 +1497,8 @@ require_once 'includes/header.php';
 
     function showRemoteVideo(stream) {
         const vid = document.getElementById('remVid');
+        if (!vid) return;
+
         const vTracks = stream.getVideoTracks().length;
         const aTracks = stream.getAudioTracks().length;
 
@@ -1331,14 +1508,51 @@ require_once 'includes/header.php';
             DBG("⚠️ XƏBƏRDARLIQ: Müəllimdən görüntü gəlmir!");
         }
 
+        // --- iOS & Safari Autoplay Robustness ---
+        // 1. Force inline playback attributes via JS
+        vid.setAttribute('playsinline', '');
+        vid.setAttribute('webkit-playsinline', '');
+        vid.setAttribute('autoplay', '');
+
+        // 2. Force muted = true BEFORE assigning srcObject
+        vid.muted = true;
+
+        // 3. Assign stream directly — do NOT call vid.load()!
+        //    On iOS Safari, .load() on a MediaStream resets the source and kills playback.
         vid.srcObject = stream;
-        vid.muted = false;
-        vid.play().catch(e => {
-            DBG("🔇 Otomatik səs bloklandı, 'Unmute' düyməsini istifadə edin.");
-            vid.muted = true;
-            vid.play();
-            document.getElementById('unmuteBtn').style.display = 'flex';
-        });
+
+        // 4. Play function with unmute attempt
+        const tryPlay = () => {
+            vid.play().then(() => {
+                DBG("▶️ Video yayımı başladı");
+                // Attempt to unmute (works after user gesture like 'Join')
+                setTimeout(() => {
+                    vid.muted = false;
+                }, 100);
+            }).catch(e => {
+                DBG("🔇 Otomatik səs bloklandı, 'Unmute' düyməsini istifadə edin.");
+                vid.muted = true;
+                vid.play().catch(() => {});
+                const unmuteBtn = document.getElementById('unmuteBtn');
+                if (unmuteBtn) unmuteBtn.style.display = 'flex';
+            });
+        };
+
+        // 5. iOS: auto-retry on pause events (power saving, tab switch, Safari restrictions)
+        vid.onpause = () => {
+            if (vid.srcObject && vid.srcObject.active) {
+                DBG("⚠️ iOS video dayandı, yenidən başladılır...");
+                setTimeout(tryPlay, 300);
+            }
+        };
+
+        // 6. Play when metadata is ready, or immediately if already loaded
+        if (vid.readyState >= 2) {
+            tryPlay();
+        } else {
+            vid.onloadedmetadata = tryPlay;
+        }
+
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 

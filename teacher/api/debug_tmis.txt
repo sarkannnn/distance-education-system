@@ -1,0 +1,93 @@
+[
+    {
+        "subject_id": 9719,
+        "subject_name": "Verilənlərin struktru və alqoritmlər",
+        "subject_code": "İF-09",
+        "lesson_type": "Mühazirə",
+        "all_students": 25,
+        "active_students": 25,
+        "completed_topics": 4,
+        "planned_topics": 17,
+        "attendance_percent": 85.1,
+        "progress_percent": 23.5,
+        "status": "Əla"
+    },
+    {
+        "subject_id": 13256,
+        "subject_name": "İnformasiya texnologiyaları",
+        "subject_code": "İF-16",
+        "lesson_type": "Mühazirə",
+        "all_students": 16,
+        "active_students": 16,
+        "completed_topics": 3,
+        "planned_topics": 15,
+        "attendance_percent": 66.3,
+        "progress_percent": 20,
+        "status": "Yaxşı"
+    },
+    {
+        "subject_id": 13390,
+        "subject_name": "Veb sistemləri və texnologiyaları",
+        "subject_code": "İF-02",
+        "lesson_type": "Mühazirə",
+        "all_students": 7,
+        "active_students": 7,
+        "completed_topics": 4,
+        "planned_topics": 22,
+        "attendance_percent": 77.8,
+        "progress_percent": 18.2,
+        "status": "Yaxşı"
+    },
+    {
+        "subject_id": 12001,
+        "subject_name": " İnformasiyanın idarə edilməsi ",
+        "subject_code": "ÜFSF-04-02",
+        "lesson_type": "Mühazirə",
+        "all_students": 16,
+        "active_students": 15,
+        "completed_topics": 2,
+        "planned_topics": 9,
+        "attendance_percent": 92.2,
+        "progress_percent": 22.2,
+        "status": "Əla"
+    },
+    {
+        "subject_id": 11927,
+        "subject_name": "İnformasiyanın idarə edilməsi ",
+        "subject_code": "ÜFSF-04-02",
+        "lesson_type": "Mühazirə",
+        "all_students": 12,
+        "active_students": 12,
+        "completed_topics": 2,
+        "planned_topics": 9,
+        "attendance_percent": 89.6,
+        "progress_percent": 22.2,
+        "status": "Əla"
+    },
+    {
+        "subject_id": 11981,
+        "subject_name": "İnformasiyanın idarə edilməsi",
+        "subject_code": "ÜFSF-04-02",
+        "lesson_type": "Mühazirə",
+        "all_students": 5,
+        "active_students": 5,
+        "completed_topics": 2,
+        "planned_topics": 9,
+        "attendance_percent": 85,
+        "progress_percent": 22.2,
+        "status": "Əla"
+    },
+    {
+        "subject_id": 11791,
+        "subject_name": " İnformasiyanın idarə edilməsi ",
+        "subject_code": "ÜFSF-04-02",
+        "lesson_type": "Mühazirə",
+        "all_students": 19,
+        "active_students": 19,
+        "completed_topics": 2,
+        "planned_topics": 9,
+        "attendance_percent": 89.5,
+        "progress_percent": 22.2,
+        "status": "Əla"
+    }
+]

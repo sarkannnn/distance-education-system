@@ -258,14 +258,14 @@ require_once 'includes/header.php';
     <main class="main-content">
         <div class="content-container space-y-6">
             <!-- Page Header -->
-            <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 16px;">
+            <div class="flex items-center justify-between" style="flex-wrap: wrap; gap: 16px; margin-top: 80px;">
                 <div class="page-header" style="margin-bottom: 0;">
                     <h1>Canlı Dərslər</h1>
                     <p>Hazırda davam edən və tezliklə başlayacaq dərslər</p>
                 </div>
 
                 <?php if ($activeLiveCount > 0): ?>
-                    <div class="badge badge-live" style="padding: 10px 20px; font-size: 14px;">
+                    <div class="badge badge-live" style="padding: 10px 20px; font-size: 14px; align-self: center;">
                         <span
                             style="width: 12px; height: 12px; background: white; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
                         <?php echo $activeLiveCount; ?> Canlı Dərs
@@ -274,6 +274,14 @@ require_once 'includes/header.php';
             </div>
 
             <style>
+                .live-class-card {
+                    background: var(--bg-white);
+                    border-radius: 16px;
+                    padding: 24px;
+                    border: 1px solid var(--border-color);
+                    transition: var(--transition);
+                }
+
                 .nav-tabs {
                     display: flex;
                     border-bottom: 2px solid #e5e7eb;
@@ -301,6 +309,66 @@ require_once 'includes/header.php';
                     color: var(--primary);
                     border-bottom-color: var(--primary);
                 }
+
+                /* ===== Mobile Responsive ===== */
+                @media (max-width: 768px) {
+                    .live-class-card {
+                        padding: 16px;
+                    }
+                    .nav-tabs {
+                        gap: 20px;
+                        overflow-x: auto;
+                        -webkit-overflow-scrolling: touch;
+                        scrollbar-width: none;
+                    }
+                    .nav-tabs::-webkit-scrollbar {
+                        display: none;
+                    }
+                    .nav-tab {
+                        font-size: 14px;
+                        white-space: nowrap;
+                        flex-shrink: 0;
+                    }
+                }
+
+                /* Live class cards responsive */
+                .live-class-card .flex.gap-6 {
+                    flex-direction: column !important;
+                }
+
+                @media (max-width: 768px) {
+                    .live-class-card .flex.gap-6 > div:first-child {
+                        min-width: 0 !important;
+                    }
+
+                    .live-actions {
+                        width: 100% !important;
+                        min-width: 0 !important;
+                    }
+
+                    .live-actions .btn {
+                        width: 100% !important;
+                    }
+
+                    /* Upcoming classes stacked */
+                    .card-dark > .space-y-4 > div {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 8px;
+                    }
+
+                    .card-dark > .space-y-4 > div > div:last-child {
+                        text-align: left !important;
+                    }
+
+                    /* Page header wrap */
+                    .flex.items-center.justify-between {
+                        flex-direction: column !important;
+                        align-items: flex-start !important;
+                        gap: 12px !important;
+                    }
+                }
+
             </style>
 
             <div class="nav-tabs">

@@ -1,5 +1,5 @@
 /**
- * Distant Təhsil Sistemi - CSS Styles
+ * Distant TÉ™hsil Sistemi - CSS Styles
  * Modern, Premium Design
  */
 
@@ -2304,7 +2304,7 @@ input:checked+.toggle-slider::before {
    Responsive Design
    ========================================== */
 
-/* Tablet ve daha küçük */
+/* Tablet ve daha kÃ¼Ã§Ã¼k */
 @media (max-width: 1024px) {
     .sidebar {
         position: fixed;
@@ -2329,6 +2329,7 @@ input:checked+.toggle-slider::before {
 
     .main-content {
         padding: 16px;
+        padding-top: calc(var(--header-height) + 16px);
     }
 
     .top-header {
@@ -2665,7 +2666,7 @@ input:checked+.toggle-slider::before {
     }
 }
 
-/* Çox kiçik ekranlar */
+/* Ã‡ox kiÃ§ik ekranlar */
 @media (max-width: 360px) {
     .top-header {
         padding: 0 12px;
@@ -3065,7 +3066,7 @@ input:checked+.toggle-slider::before {
     left: 50%;
     transform: translateX(-50%);
     width: 140px;
-    /* Daha geniş */
+    /* Daha geniÅŸ */
     height: 15px;
     /* Daha dayaz */
     background: white;
@@ -3081,9 +3082,9 @@ input:checked+.toggle-slider::before {
 
 .stat-icon-mockup {
     width: 130px;
-    /* İkon ölçüsü: 130px */
+    /* Ä°kon Ã¶lÃ§Ã¼sÃ¼: 130px */
     height: 130px;
-    /* İkon ölçüsü: 130px */
+    /* Ä°kon Ã¶lÃ§Ã¼sÃ¼: 130px */
     border-radius: 28px;
     display: flex;
     align-items: center;
@@ -3094,7 +3095,7 @@ input:checked+.toggle-slider::before {
 .stat-icon-mockup i,
 .stat-icon-mockup svg {
     width: 80px !important;
-    /* İkon daxili SVG ölçüsü mütənasib artırıldı */
+    /* Ä°kon daxili SVG Ã¶lÃ§Ã¼sÃ¼ mÃ¼tÉ™nasib artÄ±rÄ±ldÄ± */
     height: 80px !important;
     stroke-width: 1.5 !important;
 }
@@ -3122,7 +3123,7 @@ input:checked+.toggle-slider::before {
 
 .stat-value-mockup {
     font-size: 52px;
-    /* Rəqəm ölçüsü (Value): 52px */
+    /* RÉ™qÉ™m Ã¶lÃ§Ã¼sÃ¼ (Value): 52px */
     font-weight: 800;
     color: #1e293b;
     margin-bottom: 8px;
@@ -3131,7 +3132,7 @@ input:checked+.toggle-slider::before {
 
 .stat-label-mockup {
     font-size: 20px;
-    /* Yazı ölçüsü (Label): 20px */
+    /* YazÄ± Ã¶lÃ§Ã¼sÃ¼ (Label): 20px */
     font-weight: 700;
     letter-spacing: 0.5px;
 }
@@ -3151,3 +3152,55 @@ input:checked+.toggle-slider::before {
 .stat-label-mockup.green {
     color: #34d399;
 }
+
+/* Responsive Tables */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+.table-responsive .table {
+    width: 100%;
+    min-width: 800px;
+    border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+    .table-responsive .table {
+        min-width: 1000px;
+    }
+}
+
+
+/* Attendance Report Specific */
+.report-container {
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .report-container {
+        padding: 16px !important;
+        border-radius: 12px;
+    }
+    
+    .attendance-container {
+        padding: 12px !important;
+    }
+
+    select.form-input {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        max-width: 100% !important;
+    }
+    
+    .min-w-0-mobile {
+        min-width: 0 !important;
+    }
+}
+

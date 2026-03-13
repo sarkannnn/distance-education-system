@@ -148,7 +148,7 @@ require_once 'includes/header.php';
             <div class="card p-6">
                 <div class="flex flex-col gap-5">
                     <!-- Title Row -->
-                    <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center justify-between gap-3" style="flex-wrap: wrap;">
                         <div class="flex items-center gap-3">
                             <h1 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">
                                 <?php echo e($course['title']); ?>
@@ -363,8 +363,8 @@ require_once 'includes/header.php';
                             <p class="text-muted text-sm">Bu kursa hələ heç bir tələbə qeydiyyatdan keçməyib.</p>
                         </div>
                     <?php else: ?>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left" style="border-collapse: separate; border-spacing: 0;">
+                        <div class="table-responsive">
+                            <table class="w-full text-left table" style="border-collapse: separate; border-spacing: 0;">
                                 <thead style="background: #f8fafc;">
                                     <tr>
                                         <th

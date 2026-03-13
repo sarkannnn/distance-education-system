@@ -189,8 +189,37 @@ $archiveStats['total_videos'] = count(array_filter($archivedLessons, fn($l) => $
 $archiveStats['total_pdfs'] = count(array_filter($archivedLessons, fn($l) => $l['hasPdf']));
 $archiveStats['total_views'] = array_sum(array_column($archivedLessons, 'views'));
 
+// CHANGE: Populate course dropdown with all courses the student is enrolled in
+// Previously the dropdown only showed courses that had archived lessons.
+// Now it loads all enrolled courses from the enrollments table.
+$allCourseTitles = [];
+
+// Add courses from TMIS if available
+$tmisSubjs = tmis_get('/student/subjects');
+if ($tmisSubjs && is_array($tmisSubjs)) {
+    foreach ($tmisSubjs as $subj) {
+        if (!empty($subj['title'])) {
+            $allCourseTitles[] = $subj['title'];
+        }
+    }
+}
+
+// Add courses from local database
+try {
+    $localCourses = $db->fetchAll(
+        "SELECT c.title FROM courses c JOIN enrollments e ON c.id = e.course_id WHERE e.user_id = ?",
+        [$currentUser['id']]
+    );
+    foreach ($localCourses as $lc) {
+        if (!empty($lc['title'])) {
+            $allCourseTitles[] = $lc['title'];
+        }
+    }
+} catch (Exception $e) {}
+
 // Unikal kurslar
-$courses = array_unique(array_column($archivedLessons, 'course'));
+$courses = array_unique($allCourseTitles);
+sort($courses);
 
 // Stats (use API stats if available, else calculated)
 $totalViews = $archiveStats['total_views'];

@@ -29,6 +29,11 @@ $course = '';
 $instructor = '';
 $date = '';
 
+$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+$host = $_SERVER['HTTP_HOST'];
+$baseDir = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
+$baseUrl = $protocol . "://" . $host . $baseDir;
+
 try {
     if ($type === 'live') {
         // Canlı dərs yazısı — redundant metadata istifadə et
@@ -38,7 +43,7 @@ try {
         );
 
         if ($lesson && $lesson['recording_path']) {
-            $videoUrl = '../uploads/videos/' . $lesson['recording_path'];
+            $videoUrl = $baseUrl . '/uploads/videos/' . $lesson['recording_path'];
             $title = $lesson['title'] ?: ($lesson['subject_name'] ?? 'Canlı Dərs');
             $course = $lesson['subject_name'] ?? 'Fənn';
             $instructor = trim($lesson['instructor_name'] ?? 'Müəllim');
@@ -68,17 +73,23 @@ try {
                 $filename = basename(parse_url($rawUrl, PHP_URL_PATH));
                 $localDir = __DIR__ . '/../teacher/uploads/archive/';
                 if (file_exists($localDir . $filename)) {
-                    $videoUrl = '../teacher/uploads/archive/' . $filename;
+                    $videoUrl = $baseUrl . '/teacher/uploads/archive/' . $filename;
                 } else {
                     // Faylın adını yoxla, yoxsa raw URL istifadə et
-                    $videoUrl = '../teacher/uploads/archive/' . $filename;
+                    $videoUrl = $baseUrl . '/teacher/uploads/archive/' . $filename;
                 }
             } elseif (str_starts_with($rawUrl, 'teacher/')) {
-                $videoUrl = '../' . $rawUrl;
-            } elseif (!str_starts_with($rawUrl, '../')) {
-                $videoUrl = '../teacher/uploads/archive/' . $rawUrl;
+                $videoUrl = $baseUrl . '/' . $rawUrl;
+            } elseif (!str_starts_with($rawUrl, '../') && !str_starts_with($rawUrl, 'http')) {
+                $videoUrl = $baseUrl . '/teacher/uploads/archive/' . $rawUrl;
             } else {
-                $videoUrl = $rawUrl;
+                // Remove leading ../ if present and append to base URL
+                $cleanUrl = preg_replace('/^(\.\.\/)+/', '', $rawUrl);
+                if (str_starts_with($rawUrl, 'http')) {
+                     $videoUrl = $rawUrl;
+                } else {
+                     $videoUrl = $baseUrl . '/' . $cleanUrl;
+                }
             }
 
             $title = $lesson['title'];
@@ -130,9 +141,7 @@ require_once 'includes/header.php';
                 style="background: var(--card-bg); border-radius: 24px; overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color);">
                 <!-- Player Area -->
                 <div style="aspect-ratio: 16/9; background: #000; position: relative;">
-                    <video id="player" controls playsinline style="width: 100%; height: 100%;">
-                        <source src="<?php echo e($videoUrl); ?>" type="video/webm">
-                        <source src="<?php echo e($videoUrl); ?>" type="video/mp4">
+                    <video id="player" controls playsinline src="<?php echo e($videoUrl); ?>" style="width: 100%; height: 100%;">
                         Brauzeriniz video pleyeri dəstəkləmir.
                     </video>
                 </div>

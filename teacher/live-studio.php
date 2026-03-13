@@ -332,29 +332,203 @@ require_once 'includes/header.php';
     }
 
     @keyframes slideIn {
-        from {
-            opacity: 0;
-            transform: translateX(30px);
-        }
-
         to {
             opacity: 1;
             transform: translateX(0);
         }
     }
+
+    /* Responsive Studio Layout */
+    .studio-main-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr 380px;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* Mobile toggle buttons — hidden on desktop */
+    .mobile-toggle-btn {
+        display: none;
+    }
+
+    @media (max-width: 1200px) {
+        .studio-main-grid {
+            grid-template-columns: 240px 1fr 300px;
+        }
+    }
+
+    @media (max-width: 1024px) {
+        .mobile-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .mobile-toggle-btn:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        .mobile-toggle-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .studio-main-grid {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sidebar-left,
+        .sidebar-right {
+            display: none !important;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 500;
+            height: 55vh !important;
+            max-height: 55vh;
+            border: none !important;
+            border-top: 2px solid #334155 !important;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease-out;
+            overflow-y: auto !important;
+        }
+
+        .sidebar-left.mobile-open,
+        .sidebar-right.mobile-open {
+            display: flex !important;
+        }
+
+        @keyframes mobileSlideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .sidebar-left.mobile-open,
+        .sidebar-right.mobile-open {
+            animation: mobileSlideUp 0.3s ease-out;
+        }
+
+        .mobile-panel-close {
+            display: flex !important;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 510;
+        }
+
+        .studio-center {
+            padding: 8px !important;
+            min-height: 0;
+            flex: 1;
+        }
+
+        .studio-center > div:first-child {
+            padding: 8px !important;
+        }
+
+        #mainVideoWrapper {
+            border-radius: 12px !important;
+            max-width: 100% !important;
+        }
+
+        .studio-header {
+            padding: 0 10px !important;
+            height: 55px !important;
+            min-height: 55px !important;
+            gap: 8px;
+        }
+
+        .studio-header h1 {
+            font-size: 13px !important;
+        }
+
+        .studio-header .live-status-badge {
+            padding: 5px 10px !important;
+        }
+
+        .studio-header .live-text {
+            font-size: 10px !important;
+        }
+
+        /* Compact controls bar on mobile */
+        .control-btn {
+            width: 42px !important;
+            height: 42px !important;
+        }
+
+        .studio-center > div:last-child {
+            height: 80px !important;
+            padding: 0 10px !important;
+            gap: 15px !important;
+        }
+
+        .studio-center > div:last-child span {
+            font-size: 8px !important;
+        }
+
+        /* Hide the divider line in controls */
+        .studio-center > div:last-child > div[style*="width: 1px"] {
+            display: none;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .studio-header h1 {
+            display: none !important;
+        }
+
+        .studio-header .live-status-badge span.live-text {
+            display: none;
+        }
+
+        .control-btn {
+            width: 38px !important;
+            height: 38px !important;
+        }
+    }
+
+    /* Panel close button - hidden on desktop */
+    .mobile-panel-close {
+        display: none;
+    }
 </style>
 
 <div class="main-wrapper" style="height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: white;">
     <!-- STUDIO HEADER -->
-    <div
+    <div class="studio-header"
         style="height: 65px; min-height: 65px; padding: 0 30px; background: #1e293b; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; z-index: 100;">
         <div style="display: flex; align-items: center; gap: 20px;">
-            <div
+            <div class="live-status-badge"
                 style="display: flex; align-items: center; gap: 10px; background: rgba(239, 68, 68, 0.1); padding: 8px 15px; border-radius: 50px; border: 1px solid rgba(239, 68, 68, 0.2);">
                 <div
                     style="width: 10px; height: 10px; background: #ef4444; border-radius: 50%; animation: blink 1s infinite; box-shadow: 0 0 10px #ef4444;">
                 </div>
-                <span style="color: #ef4444; font-weight: 800; font-size: 12px; letter-spacing: 1px;">STUDİO
+                <span class="live-text" style="color: #ef4444; font-weight: 800; font-size: 12px; letter-spacing: 1px;">STUDİO
                     CANLI</span>
             </div>
             <h1 style="font-size: 16px; margin: 0; font-weight: 700; color: #f8fafc;">
@@ -363,7 +537,14 @@ require_once 'includes/header.php';
             </h1>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Mobile toggle buttons -->
+            <button class="mobile-toggle-btn" onclick="toggleMobilePanel('left')" id="mobileStudentsBtn">
+                📋 Tələbələr
+            </button>
+            <button class="mobile-toggle-btn" onclick="toggleMobilePanel('right')" id="mobileChatBtn">
+                💬 Çat
+            </button>
             <button
                 onclick="window.open('attendance_report.php?id=<?php echo $lessonId; ?>&minimal=1', 'AttendanceReport', 'width=1000,height=800,scrollbars=yes,resizable=yes')"
                 style="background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; cursor: pointer;">
@@ -377,11 +558,12 @@ require_once 'includes/header.php';
     </div>
 
     <!-- MAIN GRID -->
-    <div style="display: grid; grid-template-columns: 280px 1fr 380px; flex: 1; min-height: 0; overflow: hidden;">
+    <div class="studio-main-grid">
 
         <!-- LEFT SIDEBAR: ATTENDANCE -->
-        <div
+        <div class="sidebar-left" id="sidebarLeft"
             style="background: #1e293b; border-right: 2px solid #334155; display: flex; flex-direction: column; padding: 20px; gap: 20px; overflow: hidden; min-height: 0;">
+            <button class="mobile-panel-close" onclick="toggleMobilePanel('left')">&times;</button>
             <div class="sidebar-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
                 <div
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0;">
@@ -402,8 +584,8 @@ require_once 'includes/header.php';
         </div>
 
         <!-- CENTER: PRODUCTION AREA -->
-        <div
-            style="position: relative; background: #020617; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+        <div class="studio-center"
+            style="position: relative; background: #020617; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; padding: 20px; min-height: 0;">
 
             <!-- MAIN VIEWER -->
             <div
@@ -505,8 +687,9 @@ require_once 'includes/header.php';
         </div>
 
         <!-- RIGHT: SIDEBAR CORE -->
-        <div
-            style="background: #1e293b; border-left: 2px solid #334155; display: flex; flex-direction: column; padding: 20px; gap: 20px; overflow: visible; min-height: 0;">
+        <div class="sidebar-right" id="sidebarRight"
+            style="background: #1e293b; border-left: 2px solid #334155; display: flex; flex-direction: column; overflow: hidden; padding: 25px;">
+            <button class="mobile-panel-close" onclick="toggleMobilePanel('right')">&times;</button>
 
             <!-- STUDENTS VIDEO GRID -->
             <!-- STUDENTS VIDEO GRID -->
@@ -837,6 +1020,23 @@ require_once 'includes/header.php';
 
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
+    // === Mobile Panel Toggle ===
+    function toggleMobilePanel(side) {
+        const panel = side === 'left' ? document.getElementById('sidebarLeft') : document.getElementById('sidebarRight');
+        const btn = side === 'left' ? document.getElementById('mobileStudentsBtn') : document.getElementById('mobileChatBtn');
+        const otherPanel = side === 'left' ? document.getElementById('sidebarRight') : document.getElementById('sidebarLeft');
+        const otherBtn = side === 'left' ? document.getElementById('mobileChatBtn') : document.getElementById('mobileStudentsBtn');
+
+        // Close the other panel
+        if (otherPanel) { otherPanel.classList.remove('mobile-open'); }
+        if (otherBtn) { otherBtn.classList.remove('active'); }
+
+        // Toggle current panel
+        if (panel) {
+            panel.classList.toggle('mobile-open');
+            if (btn) btn.classList.toggle('active', panel.classList.contains('mobile-open'));
+        }
+    }
     const LOG = (msg, color = "#a5f3fc") => {
         const d = document.getElementById('logBox');
         if (!d) {

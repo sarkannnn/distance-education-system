@@ -627,7 +627,7 @@ require_once 'includes/header.php';
 
     <main class="main-content" <?php echo $isMinimal ? 'style="margin-left:0; width:100%; padding:0; background:#f8fafc;"' : ''; ?>>
         <!-- Add a spacer div or extra top padding to avoid fixed header overlap -->
-        <div class="report-container" style="padding: <?php echo $isMinimal ? '20px' : '30px'; ?>; margin-top: <?php echo $isMinimal ? '0' : '20px'; ?>;">
+        <div class="report-container attendance-container" style="margin-top: <?php echo $isMinimal ? '0' : '20px'; ?>;">
             
             <!-- OFFICIAL PRINT HEADER -->
             <div class="print-only" style="display: none; flex-direction: column; align-items: center; text-align: center; margin-bottom: 40px; border-bottom: 2pt solid #000; padding-bottom: 20px;">
@@ -658,7 +658,7 @@ require_once 'includes/header.php';
                 </div>
             </div>
 
-            <div class="print-only-hide" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <div class="print-only-hide" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 20px;">
                 <div>
                     <h1 style="font-size: 26px; font-weight: 850; color: #1e293b; margin: 0; letter-spacing: -0.5px;">
                         İştirakçı Jurnalı</h1>
@@ -753,8 +753,8 @@ require_once 'includes/header.php';
                     <h3 style="margin: 0; font-size: 18px; font-weight: 800; color: #334155;">Qoşulma Tarixçəsi</h3>
                 </div>
 
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <div class="table-responsive">
+                    <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead>
                         <thead>
                             <tr style="background: #f8fafc; color: #94a3b8; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; border-bottom: 2px solid #f1f5f9;">
@@ -807,8 +807,8 @@ require_once 'includes/header.php';
                                                     <div style="width: 32px; height: 32px; background: #3b82f6; color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">
                                                         <?php echo strtoupper(substr($log['first_name'], 0, 1)); ?>
                                                     </div>
-                                                    <div>
-                                                        <div style="font-weight: 700; color: #1e293b; font-size: 13px;"><?php echo e($fullName); ?></div>
+                                                    <div style="min-width: 180px;">
+                                                        <div style="font-weight: 700; color: #1e293b; font-size: 13px; white-space: nowrap;"><?php echo e($fullName); ?></div>
                                                         <div style="font-size: 11px; color: #94a3b8;"><?php echo e($log['email']); ?></div>
                                                     </div>
                                                 </div>
@@ -858,9 +858,9 @@ require_once 'includes/header.php';
                                                     <div style="width: 32px; height: 32px; background: #eff6ff; color: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">
                                                         <?php echo strtoupper(substr($log['first_name'], 0, 1)); ?>
                                                     </div>
-                                                    <div style="min-width: 0; page-break-inside: avoid; break-inside: avoid;">
-                                                        <div style="font-weight: 700; color: #1e293b; font-size: 13px; word-break: break-word;"><?php echo e($fullName); ?></div>
-                                                        <div style="font-size: 11px; color: #94a3b8; word-break: break-all;"><?php echo e($log['email']); ?></div>
+                                                    <div style="min-width: 180px; page-break-inside: avoid; break-inside: avoid;">
+                                                        <div style="font-weight: 700; color: #1e293b; font-size: 13px; white-space: nowrap;"><?php echo e($fullName); ?></div>
+                                                        <div style="font-size: 11px; color: #94a3b8;"><?php echo e($log['email']); ?></div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -923,7 +923,7 @@ require_once 'includes/header.php';
                     <h2 style="font-size: 20px; font-weight: 850; color: #1e293b; margin: 0; text-transform: uppercase; letter-spacing: 1px;">KURS ÜZRƏ ÜMUMİ TARİXÇƏ 📈</h2>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
                     <?php foreach($allLessons as $past): ?>
                         <?php 
                             $pastAvgDur = $past['attendee_count'] > 0 ? round(($past['total_seconds'] / $past['attendee_count']) / 60) : 0;
@@ -1020,19 +1020,33 @@ require_once 'includes/header.php';
         div[style*="background: white"] { border: none !important; box-shadow: none !important; border-radius: 0 !important; }
         .report-container > div:last-child { display: block !important; visibility: visible !important; width: 100% !important; margin-top: 20px !important; }
         
-        table { width: 100% !important; border-collapse: collapse !important; border: 1pt solid #000 !important; margin-top: 10px !important; display: table !important; }
-        th { background: #f0f0f0 !important; border: 1pt solid #000 !important; padding: 10px !important; font-weight: bold !important; font-size: 10pt !important; color: #000 !important; -webkit-print-color-adjust: exact; }
-        td { border: 1pt solid #000 !important; padding: 8px !important; font-size: 10pt !important; color: #000 !important; background: white !important; }
+        table { width: 100% !important; border-collapse: collapse !important; border: 1pt solid #000 !important; margin-top: 10px !important; display: table !important; table-layout: fixed !important; }
+        th { background: #f0f0f0 !important; border: 1pt solid #000 !important; padding: 6px 4px !important; font-weight: bold !important; font-size: 8pt !important; color: #000 !important; -webkit-print-color-adjust: exact; }
+        td { border: 1pt solid #000 !important; padding: 5px 4px !important; font-size: 8pt !important; color: #000 !important; background: white !important; word-break: break-word !important; }
         
         tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+        
+        /* Name Cell Reset */
+        div[style*="min-width: 180px"] { min-width: auto !important; width: 100% !important; }
+        div[style*="white-space: nowrap"] { white-space: normal !important; overflow: visible !important; }
         
         /* Content Refinement */
         div[style*="width: 44px; height: 44px"], span[style*="width: 7px; height: 7px"] { display: none !important; }
         div[style*="height: 6px; background: #f1f5f9"] { display: none !important; }
-        span { background: transparent !important; color: #000 !important; padding: 0 !important; font-weight: bold !important; border: none !important; }
+        span { background: transparent !important; color: #000 !important; padding: 0 !important; font-weight: bold !important; border: none !important; font-size: 8pt !important; }
         
-        /* Ensure table is visible even if inside overflow div */
-        div[style*="overflow-x: auto"] { overflow: visible !important; max-width: none !important; }
+        .table-responsive, div[style*="overflow-x: auto"] { 
+            overflow: visible !important; 
+            max-width: none !important; 
+            display: block !important;
+            width: 100% !important;
+        }
+        
+        .table-responsive .table, table { 
+            width: 100% !important; 
+            min-width: 0 !important; 
+            min-width: auto !important;
+        }
         
         * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
@@ -1056,7 +1070,7 @@ function downloadPDF() {
     hideElements.forEach(el => el.style.display = 'none');
 
     const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [5, 5, 5, 5],
         filename: fileName,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -1064,7 +1078,8 @@ function downloadPDF() {
             useCORS: true, 
             letterRendering: true,
             scrollX: 0,
-            scrollY: 0
+            scrollY: 0,
+            width: 800
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css'] }

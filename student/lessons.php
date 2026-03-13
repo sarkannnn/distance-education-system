@@ -29,13 +29,24 @@ if ($tmisSubjects && is_array($tmisSubjects)) {
 
         // RECALCULATE for 'Online Only' progress from local DB
         // Distant sistemdə yalnız onlayn dərsləri göstəririk.
+        // CHANGE: Calculate lesson progress separately by lesson type
+        // Previously all lessons were counted as Lecture.
+        // Now counts are separated for Lecture, Seminar, and Laboratory using SUM(CASE WHEN lesson_type = ...).
         $onlineDone = $db->fetch(
-            "SELECT COUNT(*) as cnt FROM live_classes 
+            "SELECT 
+                COUNT(*) as cnt,
+                SUM(CASE WHEN lesson_type = 'lecture' THEN 1 ELSE 0 END) as lecture_done,
+                SUM(CASE WHEN lesson_type = 'seminar' THEN 1 ELSE 0 END) as seminar_done,
+                SUM(CASE WHEN lesson_type = 'laboratory' THEN 1 ELSE 0 END) as laboratory_done
+             FROM live_classes 
              WHERE (course_id = ? OR tmis_subject_id = ? OR FIND_IN_SET(?, stream_course_ids)) 
              AND status IN ('ended', 'completed')",
             [$cTmisId, $cTmisId, $cTmisId]
         );
         $totalDone = (int) ($onlineDone['cnt'] ?? 0);
+        $lectureDone = (int) ($onlineDone['lecture_done'] ?? 0);
+        $seminarDone = (int) ($onlineDone['seminar_done'] ?? 0);
+        $laboratoryDone = (int) ($onlineDone['laboratory_done'] ?? 0);
 
         $lectureCount = intval($subject['lecture_count'] ?? 0);
         $seminarCount = intval($subject['seminar_count'] ?? 0);
@@ -57,8 +68,9 @@ if ($tmisSubjects && is_array($tmisSubjects)) {
             'stats' => [
                 'lecture_count' => $lectureCount,
                 'seminar_count' => $seminarCount,
-                'lecture_done' => $totalDone, // Simplified to online-only
-                'seminar_done' => 0
+                'lecture_done' => $lectureDone,
+                'seminar_done' => $seminarDone,
+                'laboratory_done' => $laboratoryDone
             ],
             'schedule' => [
                 'days' => $subject['weekly_days'] ?? '',
@@ -87,13 +99,24 @@ if ($tmisSubjects && is_array($tmisSubjects)) {
         );
 
         foreach ($coursesData as $course) {
+            // CHANGE: Calculate lesson progress separately by lesson type
+            // Previously all lessons were counted as Lecture.
+            // Now counts are separated for Lecture, Seminar, and Laboratory using SUM(CASE WHEN lesson_type = ...).
             $completedStats = $db->fetch(
-                "SELECT COUNT(*) as total_done FROM live_classes 
+                "SELECT 
+                    COUNT(*) as total_done,
+                    SUM(CASE WHEN lesson_type = 'lecture' THEN 1 ELSE 0 END) as lecture_done,
+                    SUM(CASE WHEN lesson_type = 'seminar' THEN 1 ELSE 0 END) as seminar_done,
+                    SUM(CASE WHEN lesson_type = 'laboratory' THEN 1 ELSE 0 END) as laboratory_done
+                 FROM live_classes 
                  WHERE course_id = ? AND status IN ('ended', 'completed')",
                 [$course['id']]
             );
 
             $totalDone = intval($completedStats['total_done'] ?? 0);
+            $lectureDone = intval($completedStats['lecture_done'] ?? 0);
+            $seminarDone = intval($completedStats['seminar_done'] ?? 0);
+            $laboratoryDone = intval($completedStats['laboratory_done'] ?? 0);
 
             $instructorName = 'Müəllim';
             try {
@@ -137,8 +160,9 @@ if ($tmisSubjects && is_array($tmisSubjects)) {
                 'stats' => [
                     'lecture_count' => $course['lecture_count'] ?? 0,
                     'seminar_count' => $course['seminar_count'] ?? 0,
-                    'lecture_done' => $totalDone,
-                    'seminar_done' => 0
+                    'lecture_done' => $lectureDone,
+                    'seminar_done' => $seminarDone,
+                    'laboratory_done' => $laboratoryDone
                 ],
                 'schedule' => [
                     'days' => $course['weekly_days'] ?? '',
@@ -287,7 +311,7 @@ require_once 'includes/header.php';
 
                         <!-- Dərs Sayları -->
                         <div
-                            style="display: flex; gap: 16px; margin-top: 8px; padding: 12px 16px; background: var(--gray-50, #f9fafb); border-radius: 10px;">
+                            style="display: flex; gap: 16px; margin-top: 8px; padding: 12px 16px; background: var(--gray-50, #f9fafb); border-radius: 10px; flex-wrap: wrap;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <i data-lucide="book-open" style="width: 16px; height: 16px; color: var(--primary);"></i>
                                 <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Mühazirə:
@@ -297,6 +321,11 @@ require_once 'includes/header.php';
                                 <i data-lucide="users" style="width: 16px; height: 16px; color: var(--primary);"></i>
                                 <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Seminar:
                                     <?php echo $course['stats']['seminar_done']; ?></span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="flask-conical" style="width: 16px; height: 16px; color: var(--primary);"></i>
+                                <span style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Laboratoriya:
+                                    <?php echo $course['stats']['laboratory_done']; ?></span>
                             </div>
                         </div>
 
