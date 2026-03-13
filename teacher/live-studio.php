@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Teacher Live Studio - (V8.0 - PREMIUM REDESIGN)
  * - Sidebar Integrated Layout
@@ -76,6 +77,9 @@ if (empty($lesson['course_title'])) {
     $lesson['course_title'] = "Fənn " . $lesson['course_id'];
 }
 
+// Set to true for portrait (vertical) camera on phones, false for landscape (horizontal)
+$portraitCameraOnPhone = false;
+
 require_once 'includes/header.php';
 ?>
 <style>
@@ -129,18 +133,21 @@ require_once 'includes/header.php';
 
     #chatMessages::-webkit-scrollbar,
     #liveAttendanceList::-webkit-scrollbar,
+    #studentsGrid::-webkit-scrollbar,
     #logBox::-webkit-scrollbar {
         width: 5px;
     }
 
     #chatMessages::-webkit-scrollbar-track,
     #liveAttendanceList::-webkit-scrollbar-track,
+    #studentsGrid::-webkit-scrollbar-track,
     #logBox::-webkit-scrollbar-track {
         background: transparent;
     }
 
     #chatMessages::-webkit-scrollbar-thumb,
     #liveAttendanceList::-webkit-scrollbar-thumb,
+    #studentsGrid::-webkit-scrollbar-thumb,
     #logBox::-webkit-scrollbar-thumb {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 10px;
@@ -210,6 +217,43 @@ require_once 'includes/header.php';
         box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.15);
         z-index: 2010;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+    }
+
+    /* Collapsed: slide off-screen to the left */
+    .wb-controls-floating.wb-collapsed {
+        transform: translateY(-50%) translateX(calc(-100% - 20px));
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* Floating re-open tab (visible only when toolbar is collapsed) */
+    #wbToolbarOpenTab {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2015;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 10px 6px;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        transition: background 0.2s;
+    }
+
+    #wbToolbarOpenTab:hover {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: #3b82f6;
+    }
+
+    #wbToolbarOpenTab.visible {
+        display: flex;
     }
 
     .wb-group {
@@ -363,8 +407,8 @@ require_once 'includes/header.php';
             display: flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: white;
             padding: 6px 14px;
             border-radius: 10px;
@@ -374,9 +418,11 @@ require_once 'includes/header.php';
             transition: all 0.2s;
             white-space: nowrap;
         }
+
         .mobile-toggle-btn:hover {
-            background: rgba(255,255,255,0.15);
+            background: rgba(255, 255, 255, 0.15);
         }
+
         .mobile-toggle-btn.active {
             background: #3b82f6;
             border-color: #3b82f6;
@@ -396,25 +442,45 @@ require_once 'includes/header.php';
             bottom: 0;
             left: 0;
             right: 0;
-            z-index: 500;
-            height: 55vh !important;
-            max-height: 55vh;
+            z-index: 600;
+            height: 72vh !important;
+            max-height: 72vh;
             border: none !important;
             border-top: 2px solid #334155 !important;
             border-radius: 20px 20px 0 0;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-            animation: slideUp 0.3s ease-out;
-            overflow-y: auto !important;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.7);
+            overflow: hidden !important;
+            flex-direction: column !important;
         }
 
         .sidebar-left.mobile-open,
         .sidebar-right.mobile-open {
             display: flex !important;
+            animation: mobileSlideUp 0.3s ease-out;
+        }
+
+        /* Backdrop behind mobile panels */
+        #mobilePanelBackdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 599;
+            backdrop-filter: blur(2px);
+        }
+
+        #mobilePanelBackdrop.visible {
+            display: block;
         }
 
         @keyframes mobileSlideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
         }
 
         .sidebar-left.mobile-open,
@@ -447,7 +513,7 @@ require_once 'includes/header.php';
             flex: 1;
         }
 
-        .studio-center > div:first-child {
+        .studio-center>div:first-child {
             padding: 8px !important;
         }
 
@@ -457,10 +523,11 @@ require_once 'includes/header.php';
         }
 
         .studio-header {
-            padding: 0 10px !important;
-            height: 55px !important;
+            padding: 8px 10px !important;
+            height: auto !important;
             min-height: 55px !important;
-            gap: 8px;
+            gap: 6px;
+            flex-wrap: wrap;
         }
 
         .studio-header h1 {
@@ -475,24 +542,30 @@ require_once 'includes/header.php';
             font-size: 10px !important;
         }
 
+        /* Compact action buttons in header on tablet/mobile */
+        .studio-header>div:last-child>button:not(.mobile-toggle-btn) {
+            padding: 6px 12px !important;
+            font-size: 11px !important;
+        }
+
         /* Compact controls bar on mobile */
         .control-btn {
             width: 42px !important;
             height: 42px !important;
         }
 
-        .studio-center > div:last-child {
+        .studio-center>div:last-child {
             height: 80px !important;
             padding: 0 10px !important;
             gap: 15px !important;
         }
 
-        .studio-center > div:last-child span {
+        .studio-center>div:last-child span {
             font-size: 8px !important;
         }
 
         /* Hide the divider line in controls */
-        .studio-center > div:last-child > div[style*="width: 1px"] {
+        .studio-center>div:last-child>div[style*="width: 1px"] {
             display: none;
         }
     }
@@ -510,11 +583,140 @@ require_once 'includes/header.php';
             width: 38px !important;
             height: 38px !important;
         }
+
+        /* Even more compact toggle and action buttons on small phones */
+        .mobile-toggle-btn {
+            padding: 5px 8px !important;
+            font-size: 10px !important;
+            gap: 3px !important;
+        }
+
+        .studio-header>div:last-child>button:not(.mobile-toggle-btn) {
+            padding: 5px 10px !important;
+            font-size: 10px !important;
+        }
+
+        <?php if ($portraitCameraOnPhone): ?>
+
+        /* Portrait (vertical) camera on phones */
+        #mainVideoWrapper {
+            aspect-ratio: 9/16 !important;
+            width: auto !important;
+            height: min(62vh, 400px) !important;
+            max-width: 100% !important;
+        }
+
+        <?php endif; ?>
+
+        /* Controls bar: allow horizontal scroll to prevent overflow */
+        .studio-center>div:last-child {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            scrollbar-width: none;
+        }
+
+        .studio-center>div:last-child::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Inner buttons wrapper: left-align when scrolling */
+        .studio-center>div:last-child>div:first-child {
+            margin: 0 0 !important;
+            padding: 0 15px !important;
+            gap: 15px !important;
+        }
+
+        /* Log wrapper: position above controls bar */
+        #logWrapper {
+            bottom: 90px !important;
+            left: 8px !important;
+            right: 8px !important;
+        }
     }
 
     /* Panel close button - hidden on desktop */
     .mobile-panel-close {
         display: none;
+    }
+
+    /* === Whiteboard controls: scrollable when viewport is short === */
+    @media (max-width: 900px),
+    (max-height: 700px) {
+        .wb-controls-floating {
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+
+        .wb-controls-floating::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .wb-controls-floating::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    }
+
+    /* === Modals: full-width on small screens === */
+    @media (max-width: 540px) {
+        #wbRequestModal>div {
+            width: calc(100% - 30px) !important;
+            max-width: none !important;
+            padding: 25px 20px !important;
+        }
+
+        #micRequestModal>div {
+            width: calc(100% - 30px) !important;
+            max-width: none !important;
+            padding: 25px 20px !important;
+        }
+
+        /* Start production overlay: scale down for small screens */
+        #startProductionOverlay {
+            padding: 20px !important;
+        }
+
+        #startProductionOverlay h2 {
+            font-size: 20px !important;
+        }
+
+        #startProductionOverlay p {
+            font-size: 14px !important;
+            margin-bottom: 24px !important;
+        }
+
+        #startProductionOverlay>div>button[onclick] {
+            font-size: 15px !important;
+            padding: 14px 20px !important;
+            width: 100%;
+        }
+    }
+
+    /* === Ultra-small screens (≤ 400px) === */
+    @media (max-width: 400px) {
+        .control-btn {
+            width: 34px !important;
+            height: 34px !important;
+        }
+
+        .control-btn i[data-lucide] {
+            width: 16px !important;
+            height: 16px !important;
+        }
+
+        .studio-center>div:last-child {
+            gap: 8px !important;
+        }
+
+        .studio-header .live-status-badge {
+            padding: 4px 8px !important;
+        }
+
+        .mobile-toggle-btn {
+            padding: 4px 6px !important;
+            font-size: 9px !important;
+        }
     }
 </style>
 
@@ -556,6 +758,9 @@ require_once 'includes/header.php';
             </button>
         </div>
     </div>
+
+    <!-- Mobile panel backdrop -->
+    <div id="mobilePanelBackdrop" onclick="closeMobilePanels()"></div>
 
     <!-- MAIN GRID -->
     <div class="studio-main-grid">
@@ -609,13 +814,13 @@ require_once 'includes/header.php';
                     </div>
 
                     <!-- TEACHER NAME BADGE -->
-                    <div
+                    <!-- <div
                         style="position: absolute; top: 25px; left: 25px; background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #fff; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(8px); z-index: 50; display: flex; align-items: center; gap: 8px;">
                         <div
                             style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981;">
                         </div>
                         Müəllim: <?php echo e($currentUser['first_name'] . ' ' . $currentUser['last_name']); ?>
-                    </div>
+                    </div> -->
                     <!-- DURATION TIMER -->
                     <div id="lessonTimer"
                         style="position: absolute; top: 25px; right: 25px; background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 10px; font-size: 13px; font-weight: 800; color: #fff; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(8px); display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace;">
@@ -627,51 +832,53 @@ require_once 'includes/header.php';
 
             <!-- CONTROLS BAR -->
             <div
-                style="height: 120px; padding: 0 30px; display: flex; align-items: center; justify-content: center; gap: 30px; background: linear-gradient(to top, rgba(15,23,42,1), rgba(15,23,42,0)); z-index: 20;">
+                style="height: 120px; display: flex; align-items: center; background: linear-gradient(to top, rgba(15,23,42,1), rgba(15,23,42,0)); z-index: 20; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 30px; padding: 0 30px; margin: 0 auto; flex-shrink: 0;">
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <button id="btnMic" onclick="toggleMic()" class="control-btn" title="Mikrofon">
-                        <i data-lucide="mic" style="width: 22px; height: 22px;"></i>
-                    </button>
-                    <span
-                        style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">MİKROFON</span>
-                </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <button id="btnMic" onclick="toggleMic()" class="control-btn" title="Mikrofon">
+                            <i data-lucide="mic" style="width: 22px; height: 22px;"></i>
+                        </button>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">MİKROFON</span>
+                    </div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <button id="btnCam" onclick="toggleCam()" class="control-btn" title="Kamera">
-                        <i data-lucide="video" style="width: 22px; height: 22px;"></i>
-                    </button>
-                    <span
-                        style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">KAMERA</span>
-                </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <button id="btnCam" onclick="toggleCam()" class="control-btn" title="Kamera">
+                            <i data-lucide="video" style="width: 22px; height: 22px;"></i>
+                        </button>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">KAMERA</span>
+                    </div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <button id="btnScreen" onclick="toggleScreenShare()" class="control-btn" title="Ekran Paylaş">
-                        <i data-lucide="monitor" style="width: 22px; height: 22px;"></i>
-                    </button>
-                    <span
-                        style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">EKRAN</span>
-                </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <button id="btnScreen" onclick="toggleScreenShare()" class="control-btn" title="Ekran Paylaş">
+                            <i data-lucide="monitor" style="width: 22px; height: 22px;"></i>
+                        </button>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">EKRAN</span>
+                    </div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <button id="btnWhiteboard" onclick="toggleWhiteboard()" class="control-btn" title="Ağ Lövhə">
-                        <i data-lucide="pen-tool" style="width: 22px; height: 22px;"></i>
-                    </button>
-                    <span
-                        style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">LÖVHƏ</span>
-                </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <button id="btnWhiteboard" onclick="toggleWhiteboard()" class="control-btn" title="Ağ Lövhə">
+                            <i data-lucide="pen-tool" style="width: 22px; height: 22px;"></i>
+                        </button>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">LÖVHƏ</span>
+                    </div>
 
-                <div style="width: 1px; height: 40px; background: rgba(255,255,255,0.1); margin: 0 10px;"></div>
+                    <div style="width: 1px; height: 40px; background: rgba(255,255,255,0.1); margin: 0 10px;"></div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <button
-                        onclick="document.getElementById('logWrapper').style.display = document.getElementById('logWrapper').style.display === 'none' ? 'block' : 'none'"
-                        class="control-btn" style="width: 50px; border-radius: 50%;">
-                        <i data-lucide="activity" style="width: 22px; height: 22px;"></i>
-                    </button>
-                    <span
-                        style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">LOGLAR</span>
-                </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <button
+                            onclick="document.getElementById('logWrapper').style.display = document.getElementById('logWrapper').style.display === 'none' ? 'block' : 'none'"
+                            class="control-btn" style="width: 50px; border-radius: 50%;">
+                            <i data-lucide="activity" style="width: 22px; height: 22px;"></i>
+                        </button>
+                        <span
+                            style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">LOGLAR</span>
+                    </div>
+                </div><!-- end inner flex wrapper -->
             </div>
 
             <!-- LOGS WRAPPER (HIDDEN BY DEFAULT) -->
@@ -709,25 +916,7 @@ require_once 'includes/header.php';
                     </div>
                 </div>
 
-                <style>
-                    #studentsGrid::-webkit-scrollbar {
-                        #studentsGrid::-webkit-scrollbar {
-                            width: 6px;
-                        }
 
-                        #studentsGrid::-webkit-scrollbar-track {
-                            background: transparent;
-                        }
-
-                        #studentsGrid::-webkit-scrollbar-thumb {
-                            background: rgba(255, 255, 255, 0.15);
-                            border-radius: 10px;
-                        }
-
-                        #studentsGrid::-webkit-scrollbar-thumb:hover {
-                            background: rgba(255, 255, 255, 0.3);
-                        }
-                </style>
 
                 <div id="studentsGrid"
                     style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow-y: auto; overflow-x: hidden; padding-right: 5px; flex: 1; align-content: start;">
@@ -858,6 +1047,12 @@ require_once 'includes/header.php';
 <div id="whiteboardOverlay">
     <!-- Floating Toolbar -->
     <div class="wb-controls-floating">
+        <!-- Toolbar header with close button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
+            <span style="color: #94a3b8; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">LÖVHƏ ALƏTLƏRİ</span>
+            <button class="wb-tool-btn" onclick="toggleWBToolbar()" title="Paneli Bağla"
+                style="width: 26px; height: 26px; font-size: 13px; border-radius: 8px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171; flex-shrink: 0;">✕</button>
+        </div>
         <!-- NÖV - Fon seçimi -->
         <div class="wb-group">
             <span class="wb-group-label">NÖV</span>
@@ -977,6 +1172,13 @@ require_once 'includes/header.php';
         </div>
     </div>
 
+    <!-- Re-open toolbar tab (shown when toolbar is collapsed) -->
+    <div id="wbToolbarOpenTab" onclick="toggleWBToolbar()" title="Paneli Aç">
+        <span style="font-size: 16px;">🛠️</span>
+        <span style="font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; writing-mode: vertical-rl; text-orientation: mixed;">ALƏTLƏR</span>
+        <span style="font-size: 12px; color: #60a5fa;">▶</span>
+    </div>
+
     <!-- Info Badge -->
     <div
         style="position: absolute; top: 20px; right: 20px; background: #1e293b; color: white; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 11px; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; z-index: 2010; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
@@ -991,12 +1193,11 @@ require_once 'includes/header.php';
     <div id="imagePlacementOverlay"
         style="display: none; position: absolute; inset: 0; z-index: 3000; background: rgba(0,0,0,0.3);">
         <div id="imagePlacementContainer"
-            style="position: absolute; cursor: move; border: 2px dashed #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            style="position: absolute; cursor: move; border: 2px dashed #3b82f6; box-shadow: 0 10px 30px rgba(0,0,0,0.3); touch-action: none;">
             <img id="placementImage" style="width: 100%; height: 100%; object-fit: contain; pointer-events: none;">
             <!-- Resize handle -->
             <div id="resizeHandle"
-                style="position: absolute; bottom: -8px; right: -8px; width: 16px; height: 16px; background: #3b82f6; border: 2px solid white; border-radius: 50%; cursor: se-resize;">
-            </div>
+                style="position: absolute; bottom: -12px; right: -12px; width: 28px; height: 28px; background: #3b82f6; border: 2px solid white; border-radius: 50%; cursor: se-resize; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; user-select: none; touch-action: none;">↘</div>
         </div>
         <div
             style="position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px;">
@@ -1014,7 +1215,7 @@ require_once 'includes/header.php';
     </div>
 
     <div style="flex: 1; position: relative; background: #ffffff; cursor: crosshair; overflow: hidden;">
-        <canvas id="wbCanvasInternal" style="display: block;"></canvas>
+        <canvas id="wbCanvasInternal" style="display: block; touch-action: none;"></canvas>
     </div>
 </div>
 
@@ -1026,16 +1227,32 @@ require_once 'includes/header.php';
         const btn = side === 'left' ? document.getElementById('mobileStudentsBtn') : document.getElementById('mobileChatBtn');
         const otherPanel = side === 'left' ? document.getElementById('sidebarRight') : document.getElementById('sidebarLeft');
         const otherBtn = side === 'left' ? document.getElementById('mobileChatBtn') : document.getElementById('mobileStudentsBtn');
+        const backdrop = document.getElementById('mobilePanelBackdrop');
 
         // Close the other panel
-        if (otherPanel) { otherPanel.classList.remove('mobile-open'); }
-        if (otherBtn) { otherBtn.classList.remove('active'); }
+        if (otherPanel) otherPanel.classList.remove('mobile-open');
+        if (otherBtn) otherBtn.classList.remove('active');
 
         // Toggle current panel
         if (panel) {
             panel.classList.toggle('mobile-open');
-            if (btn) btn.classList.toggle('active', panel.classList.contains('mobile-open'));
+            const isOpen = panel.classList.contains('mobile-open');
+            if (btn) btn.classList.toggle('active', isOpen);
+            if (backdrop) backdrop.classList.toggle('visible', isOpen);
         }
+    }
+
+    function closeMobilePanels() {
+        ['sidebarLeft', 'sidebarRight'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('mobile-open');
+        });
+        ['mobileStudentsBtn', 'mobileChatBtn'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
+        });
+        const backdrop = document.getElementById('mobilePanelBackdrop');
+        if (backdrop) backdrop.classList.remove('visible');
     }
     const LOG = (msg, color = "#a5f3fc") => {
         const d = document.getElementById('logBox');
@@ -1047,7 +1264,7 @@ require_once 'includes/header.php';
         d.scrollTop = d.scrollHeight;
     };
 
-    window.onerror = function (msg, url, line) {
+    window.onerror = function(msg, url, line) {
         LOG(`🚨 JS ERROR: ${msg} (Line: ${line})`, "#ef4444");
         console.error(msg, url, line);
         return false;
@@ -1073,7 +1290,7 @@ require_once 'includes/header.php';
     var wbSnapshot = null;
     var wbBgType = 'plain';
     var eraserSize = 30; // Default eraser size
-    var pencilSize = 3;  // Default pencil size
+    var pencilSize = 3; // Default pencil size
 
     // Laser pointer position (for streaming to students)
     var laserX = 0;
@@ -1186,6 +1403,13 @@ require_once 'includes/header.php';
     }
 
     // Whiteboard Functions
+    function toggleWBToolbar() {
+        const toolbar = document.querySelector('.wb-controls-floating');
+        const tab = document.getElementById('wbToolbarOpenTab');
+        const isCollapsed = toolbar.classList.toggle('wb-collapsed');
+        tab.classList.toggle('visible', isCollapsed);
+    }
+
     function toggleWhiteboard() {
         isWhiteboardActive = !isWhiteboardActive;
         const overlay = document.getElementById('whiteboardOverlay');
@@ -1200,6 +1424,9 @@ require_once 'includes/header.php';
             overlay.style.display = 'none';
             btn.classList.remove('active-blue');
             document.getElementById('laserCursor').style.display = 'none';
+            // Reset toolbar to visible state for next open
+            document.querySelector('.wb-controls-floating').classList.remove('wb-collapsed');
+            document.getElementById('wbToolbarOpenTab').classList.remove('visible');
             LOG("🎥 Normal görünüşə qayıtdı.");
         }
     }
@@ -1242,7 +1469,10 @@ require_once 'includes/header.php';
 
         wbCanvas.onmousedown = (e) => {
             if (wbTool === 'laser') return;
-            if (wbTool === 'text') { drawText(e.offsetX, e.offsetY); return; }
+            if (wbTool === 'text') {
+                drawText(e.offsetX, e.offsetY);
+                return;
+            }
 
             saveState(); // Record state BEFORE action
             isDrawing = true;
@@ -1278,12 +1508,66 @@ require_once 'includes/header.php';
             }
         };
 
-        wbCanvas.onmouseup = () => { isDrawing = false; wbSnapshot = null; };
+        wbCanvas.onmouseup = () => {
+            isDrawing = false;
+            wbSnapshot = null;
+        };
         wbCanvas.onmouseout = () => {
             isDrawing = false;
             laserCursor.style.display = 'none';
             laserActive = false; // Hide laser when mouse leaves canvas
         };
+
+        // ── Touch support ─────────────────────────────────────────────
+        // Helper: convert a Touch into canvas-relative {x, y} (same as offsetX/Y)
+        function getTouchPos(touch) {
+            const rect = wbCanvas.getBoundingClientRect();
+            return {
+                x: (touch.clientX - rect.left) * (wbCanvas.width / rect.width),
+                y: (touch.clientY - rect.top) * (wbCanvas.height / rect.height)
+            };
+        }
+
+        wbCanvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const pos = getTouchPos(e.touches[0]);
+            if (wbTool === 'laser') return;
+            if (wbTool === 'text') {
+                drawText(pos.x, pos.y);
+                return;
+            }
+            saveState();
+            isDrawing = true;
+            startX = pos.x;
+            startY = pos.y;
+            lastX = pos.x;
+            lastY = pos.y;
+            wbSnapshot = wbCtx.getImageData(0, 0, wbCanvas.width, wbCanvas.height);
+        }, {
+            passive: false
+        });
+
+        wbCanvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isDrawing) return;
+            const pos = getTouchPos(e.touches[0]);
+            if (wbTool === 'pencil' || wbTool === 'eraser') {
+                drawFreehand(pos.x, pos.y);
+            } else if (wbTool !== 'text' && wbTool !== 'laser') {
+                wbCtx.putImageData(wbSnapshot, 0, 0);
+                drawShape(pos.x, pos.y);
+            }
+        }, {
+            passive: false
+        });
+
+        wbCanvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isDrawing = false;
+            wbSnapshot = null;
+        }, {
+            passive: false
+        });
     }
 
     function drawBackground() {
@@ -1354,7 +1638,11 @@ require_once 'includes/header.php';
             canvasEl.style.backgroundColor = 'white';
         }
 
-        const bgLabels = { 'plain': 'Ağ Fon', 'grid': 'Riyaziyyat (Dama)', 'lines': 'Dil (Xətli)' };
+        const bgLabels = {
+            'plain': 'Ağ Fon',
+            'grid': 'Riyaziyyat (Dama)',
+            'lines': 'Dil (Xətli)'
+        };
         LOG("📋 Fon dəyişdirildi: " + bgLabels[type], "#3b82f6");
     }
 
@@ -1438,9 +1726,17 @@ require_once 'includes/header.php';
 
         overlay.style.display = 'block';
 
-        // Setup drag events
+        // Setup drag events (mouse)
         container.onmousedown = startImageDrag;
         document.getElementById('resizeHandle').onmousedown = startImageResize;
+
+        // Setup drag events (touch)
+        container.addEventListener('touchstart', startImageDragTouch, {
+            passive: false
+        });
+        document.getElementById('resizeHandle').addEventListener('touchstart', startImageResizeTouch, {
+            passive: false
+        });
     }
 
     function startImageDrag(e) {
@@ -1505,6 +1801,72 @@ require_once 'includes/header.php';
         document.onmouseup = null;
     }
 
+    // ── Touch equivalents for image drag ────────────────────────────────────
+    function startImageDragTouch(e) {
+        if (e.target.id === 'resizeHandle') return;
+        e.preventDefault();
+        const t = e.touches[0];
+        isDraggingImage = true;
+        const container = document.getElementById('imagePlacementContainer');
+        imgDragStartX = t.clientX;
+        imgDragStartY = t.clientY;
+        imgStartLeft = parseInt(container.style.left);
+        imgStartTop = parseInt(container.style.top);
+        document.addEventListener('touchmove', dragImageTouch, {
+            passive: false
+        });
+        document.addEventListener('touchend', stopImageDragTouch);
+    }
+
+    function dragImageTouch(e) {
+        e.preventDefault();
+        if (!isDraggingImage) return;
+        const container = document.getElementById('imagePlacementContainer');
+        const t = e.touches[0];
+        container.style.left = (imgStartLeft + (t.clientX - imgDragStartX)) + 'px';
+        container.style.top = (imgStartTop + (t.clientY - imgDragStartY)) + 'px';
+    }
+
+    function stopImageDragTouch() {
+        isDraggingImage = false;
+        document.removeEventListener('touchmove', dragImageTouch);
+        document.removeEventListener('touchend', stopImageDragTouch);
+    }
+
+    // ── Touch equivalents for image resize ──────────────────────────────────
+    function startImageResizeTouch(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const t = e.touches[0];
+        isResizingImage = true;
+        const container = document.getElementById('imagePlacementContainer');
+        imgDragStartX = t.clientX;
+        imgDragStartY = t.clientY;
+        imgStartWidth = parseInt(container.style.width);
+        imgStartHeight = parseInt(container.style.height);
+        document.addEventListener('touchmove', resizeImageTouch, {
+            passive: false
+        });
+        document.addEventListener('touchend', stopImageResizeTouch);
+    }
+
+    function resizeImageTouch(e) {
+        e.preventDefault();
+        if (!isResizingImage) return;
+        const container = document.getElementById('imagePlacementContainer');
+        const t = e.touches[0];
+        const dx = t.clientX - imgDragStartX;
+        const newW = Math.max(50, imgStartWidth + dx);
+        container.style.width = newW + 'px';
+        container.style.height = (newW / imgAspectRatio) + 'px';
+    }
+
+    function stopImageResizeTouch() {
+        isResizingImage = false;
+        document.removeEventListener('touchmove', resizeImageTouch);
+        document.removeEventListener('touchend', stopImageResizeTouch);
+    }
+
     function confirmImagePlacement() {
         const container = document.getElementById('imagePlacementContainer');
         const overlay = document.getElementById('imagePlacementOverlay');
@@ -1518,6 +1880,7 @@ require_once 'includes/header.php';
         wbCtx.drawImage(placementImg, x, y, w, h);
 
         overlay.style.display = 'none';
+        cleanupImagePlacementTouchListeners();
         placementImg = null;
 
         LOG("✅ Şəkil yerləşdirildi: " + w + "x" + h + "px", "#10b981");
@@ -1525,8 +1888,16 @@ require_once 'includes/header.php';
 
     function cancelImagePlacement() {
         document.getElementById('imagePlacementOverlay').style.display = 'none';
+        cleanupImagePlacementTouchListeners();
         placementImg = null;
         LOG("❌ Şəkil yerləşdirmə ləğv edildi", "#f59e0b");
+    }
+
+    function cleanupImagePlacementTouchListeners() {
+        const container = document.getElementById('imagePlacementContainer');
+        const handle = document.getElementById('resizeHandle');
+        if (container) container.removeEventListener('touchstart', startImageDragTouch);
+        if (handle) handle.removeEventListener('touchstart', startImageResizeTouch);
     }
 
     function drawFreehand(currX, currY) {
@@ -1687,7 +2058,9 @@ require_once 'includes/header.php';
         const chunksToSend = recordedChunks.slice();
         recordedChunks = [];
 
-        const blob = new Blob(chunksToSend, { type: 'video/webm' });
+        const blob = new Blob(chunksToSend, {
+            type: 'video/webm'
+        });
         const fd = new FormData();
         fd.append('lesson_id', lID);
         fd.append('video_blob', blob);
@@ -1696,7 +2069,10 @@ require_once 'includes/header.php';
         // Dinamik URL təyini
         const chunkUrl = window.location.pathname.includes('/teacher/') ? '../api/live/upload_chunk.php' : '/api/live/upload_chunk.php';
 
-        return fetch(chunkUrl, { method: 'POST', body: fd })
+        return fetch(chunkUrl, {
+                method: 'POST',
+                body: fd
+            })
             .then(async r => {
                 const text = await r.text();
                 try {
@@ -1753,7 +2129,9 @@ require_once 'includes/header.php';
 
     function flushChunksBeacon() {
         if (recordedChunks.length === 0) return;
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const blob = new Blob(recordedChunks, {
+            type: 'video/webm'
+        });
         const fd = new FormData();
         fd.append('lesson_id', lID);
         fd.append('video_blob', blob);
@@ -1796,7 +2174,12 @@ require_once 'includes/header.php';
                 const data = JSON.parse(xhr.responseText);
                 if (data.success) {
                     if (el) el.innerHTML = `✅ Yükləndi: ${file.name}`;
-                    const msgObj = { type: 'file', fileData: data.url, fileName: data.fileName, sender: 'Müəllim' };
+                    const msgObj = {
+                        type: 'file',
+                        fileData: data.url,
+                        fileName: data.fileName,
+                        sender: 'Müəllim'
+                    };
                     broadcastData(msgObj);
                     appendFileMessage('Mən', data.fileName, data.url, '#3b82f6');
                 } else {
@@ -1821,7 +2204,10 @@ require_once 'includes/header.php';
     let privateTarget = null; // { peer: '...', name: '...' }
 
     function setPrivateTarget(peerId, name) {
-        privateTarget = { peer: peerId, name: name };
+        privateTarget = {
+            peer: peerId,
+            name: name
+        };
         document.getElementById('targetName').innerText = name;
         document.getElementById('privateTargetIndicator').style.display = 'flex';
         document.getElementById('chatInput').placeholder = `${name} üçün özəl mesaj...`;
@@ -1842,7 +2228,12 @@ require_once 'includes/header.php';
         if (privateTarget) {
             const conn = allDataConns.find(c => c.peer === privateTarget.peer);
             if (conn && conn.open) {
-                const msgObj = { type: 'chat', message: msg, sender: 'Müəllim (Özəl)', isPrivate: true };
+                const msgObj = {
+                    type: 'chat',
+                    message: msg,
+                    sender: 'Müəllim (Özəl)',
+                    isPrivate: true
+                };
                 conn.send(msgObj);
                 appendChatMessage(`Mən -> ${privateTarget.name}`, msg, '#3b82f6');
                 LOG(`🔒 ${privateTarget.name} üçün özəl mesaj göndərildi.`, "#3b82f6");
@@ -1851,7 +2242,11 @@ require_once 'includes/header.php';
                 clearPrivateTarget();
             }
         } else {
-            const msgObj = { type: 'chat', message: msg, sender: 'Müəllim' };
+            const msgObj = {
+                type: 'chat',
+                message: msg,
+                sender: 'Müəllim'
+            };
             broadcastData(msgObj);
             appendChatMessage('Mən', msg, '#3b82f6');
         }
@@ -1859,7 +2254,9 @@ require_once 'includes/header.php';
     }
 
     function broadcastData(data, excludePeerId = null) {
-        allDataConns.forEach(conn => { if (conn.open && conn.peer !== excludePeerId) conn.send(data); });
+        allDataConns.forEach(conn => {
+            if (conn.open && conn.peer !== excludePeerId) conn.send(data);
+        });
     }
 
     function showMicRequestModal(senderName, conn) {
@@ -1870,10 +2267,26 @@ require_once 'includes/header.php';
         const aprove = document.getElementById('micApproveBtn');
         const reject = document.getElementById('micRejectBtn');
 
-        const cleanup = () => { modal.style.display = 'none'; aprove.onclick = null; reject.onclick = null; };
+        const cleanup = () => {
+            modal.style.display = 'none';
+            aprove.onclick = null;
+            reject.onclick = null;
+        };
 
-        aprove.onclick = () => { conn.send({ type: 'mic_approved' }); LOG(`${senderName} mikrofonu açıldı.`, "#22c55e"); cleanup(); };
-        reject.onclick = () => { conn.send({ type: 'mic_rejected' }); LOG(`${senderName} rədd edildi.`, "#fde047"); cleanup(); };
+        aprove.onclick = () => {
+            conn.send({
+                type: 'mic_approved'
+            });
+            LOG(`${senderName} mikrofonu açıldı.`, "#22c55e");
+            cleanup();
+        };
+        reject.onclick = () => {
+            conn.send({
+                type: 'mic_rejected'
+            });
+            LOG(`${senderName} rədd edildi.`, "#fde047");
+            cleanup();
+        };
     }
 
     function appendFileMessage(sender, fileName, fileData, color = "#fff") {
@@ -1891,12 +2304,21 @@ require_once 'includes/header.php';
     }
 
     const iceServers = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
+        iceServers: [{
+                urls: 'stun:stun.l.google.com:19302'
+            },
+            {
+                urls: 'stun:stun1.l.google.com:19302'
+            },
+            {
+                urls: 'stun:stun2.l.google.com:19302'
+            },
+            {
+                urls: 'stun:stun3.l.google.com:19302'
+            },
+            {
+                urls: 'stun:stun4.l.google.com:19302'
+            },
             {
                 urls: 'turn:openrelay.metered.ca:80',
                 username: 'openrelayproject',
@@ -1940,12 +2362,33 @@ require_once 'includes/header.php';
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 LOG("Media cihazları yoxlanılır...", "#3b82f6");
                 const tryGetMedia = async (constraints) => {
-                    try { return await navigator.mediaDevices.getUserMedia(constraints); } catch (e) { return null; }
+                    try {
+                        return await navigator.mediaDevices.getUserMedia(constraints);
+                    } catch (e) {
+                        return null;
+                    }
                 };
 
                 // HD -> SD -> Any
-                camStream = await tryGetMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: { echoCancellation: true } });
-                if (!camStream) camStream = await tryGetMedia({ video: true, audio: { echoCancellation: true } });
+                camStream = await tryGetMedia({
+                    video: {
+                        width: {
+                            ideal: 1280
+                        },
+                        height: {
+                            ideal: 720
+                        }
+                    },
+                    audio: {
+                        echoCancellation: true
+                    }
+                });
+                if (!camStream) camStream = await tryGetMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: true
+                    }
+                });
 
                 if (camStream) {
                     const camVid = document.getElementById('camSource');
@@ -1959,17 +2402,19 @@ require_once 'includes/header.php';
             if (!camStream) {
                 LOG("⚠️ Kamera tapılmadı. Görüntüsüz davam edilir.", "#f59e0b");
                 const dummyCanvas = document.createElement('canvas');
-                dummyCanvas.width = 640; dummyCanvas.height = 480;
+                dummyCanvas.width = 640;
+                dummyCanvas.height = 480;
                 const dummyCtx = dummyCanvas.getContext('2d');
-                dummyCtx.fillStyle = "black"; dummyCtx.fillRect(0, 0, 640, 480);
+                dummyCtx.fillStyle = "black";
+                dummyCtx.fillRect(0, 0, 640, 480);
                 camStream = dummyCanvas.captureStream();
                 try {
-                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
                     const osc = audioCtx.createOscillator();
                     const dst = osc.connect(audioCtx.createMediaStreamDestination());
                     osc.start();
                     camStream.addTrack(dst.stream.getAudioTracks()[0]);
-                } catch (e) { }
+                } catch (e) {}
                 document.getElementById('camSource').srcObject = camStream;
             }
 
@@ -1979,11 +2424,15 @@ require_once 'includes/header.php';
                 modal.style.display = 'flex';
 
                 document.getElementById('wbApproveBtn').onclick = () => {
-                    conn.send({ type: 'whiteboard_approved' });
+                    conn.send({
+                        type: 'whiteboard_approved'
+                    });
                     modal.style.display = 'none';
                 };
                 document.getElementById('wbRejectBtn').onclick = () => {
-                    conn.send({ type: 'whiteboard_rejected' });
+                    conn.send({
+                        type: 'whiteboard_rejected'
+                    });
                     modal.style.display = 'none';
                 };
             }
@@ -1999,7 +2448,11 @@ require_once 'includes/header.php';
 
             function startPeer(useCloud = false) {
                 const config = useCloud ? {
-                    debug: 1, host: '0.peerjs.com', port: 443, secure: true, config: iceServers
+                    debug: 1,
+                    host: '0.peerjs.com',
+                    port: 443,
+                    secure: true,
+                    config: iceServers
                 } : peerConfig;
 
                 if (peer) peer.destroy();
@@ -2082,7 +2535,10 @@ require_once 'includes/header.php';
                             const oldId = existing.getAttribute('data-peer-id');
                             if (oldId && oldId !== call.peer) {
                                 const idx = allDataConns.findIndex(c => c.peer === oldId);
-                                if (idx > -1) { allDataConns[idx].close(); allDataConns.splice(idx, 1); }
+                                if (idx > -1) {
+                                    allDataConns[idx].close();
+                                    allDataConns.splice(idx, 1);
+                                }
                                 removeStudentVideo(oldId);
                             }
                         }
@@ -2119,7 +2575,8 @@ require_once 'includes/header.php';
 
     function startCanvasCompositing() {
         canvas = document.createElement('canvas');
-        canvas.width = 1280; canvas.height = 720;
+        canvas.width = 1280;
+        canvas.height = 720;
         ctx = canvas.getContext('2d');
         drawToCanvas();
 
@@ -2132,10 +2589,17 @@ require_once 'includes/header.php';
 
         const types = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'];
         let supportedType = '';
-        for (let t of types) { if (MediaRecorder.isTypeSupported(t)) { supportedType = t; break; } }
+        for (let t of types) {
+            if (MediaRecorder.isTypeSupported(t)) {
+                supportedType = t;
+                break;
+            }
+        }
 
         try {
-            mediaRecorder = new MediaRecorder(destStream, { mimeType: supportedType });
+            mediaRecorder = new MediaRecorder(destStream, {
+                mimeType: supportedType
+            });
 
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -2161,7 +2625,9 @@ require_once 'includes/header.php';
             // Start the rendering loop only after canvas/ctx are ready
             if (canvasLoopId) clearInterval(canvasLoopId);
             canvasLoopId = setInterval(drawToCanvas, 33);
-        } catch (e) { LOG("MediaRecorder Xətası", "#ef4444"); }
+        } catch (e) {
+            LOG("MediaRecorder Xətası", "#ef4444");
+        }
     }
 
     function drawToCanvas() {
@@ -2456,6 +2922,7 @@ require_once 'includes/header.php';
     }
 
     const activeStudents = new Set();
+
     function addStudentVideo(peerId, stream, name, studentId = null) {
         const existingCard = document.getElementById('card-' + peerId);
         if (existingCard) {
@@ -2515,7 +2982,7 @@ require_once 'includes/header.php';
         stream.onaddtrack = (e) => {
             console.log(`Late track arrived for ${name}:`, e.track.kind);
             vid.srcObject = stream; // Refresh
-            vid.play().catch(() => { });
+            vid.play().catch(() => {});
         };
 
         vid.onloadedmetadata = () => {
@@ -2562,9 +3029,9 @@ require_once 'includes/header.php';
         const soundItem = createMenuItem('🔇', 'Səsi Aç', '#10b981', () => {
             vid.muted = !vid.muted;
             isMuted = vid.muted;
-            soundItem.innerHTML = vid.muted
-                ? '<span style="font-size:14px;">🔇</span><span>Səsi Aç</span>'
-                : '<span style="font-size:14px;">🔊</span><span>Səsi Bağla</span>';
+            soundItem.innerHTML = vid.muted ?
+                '<span style="font-size:14px;">🔇</span><span>Səsi Aç</span>' :
+                '<span style="font-size:14px;">🔊</span><span>Səsi Bağla</span>';
             soundItem.querySelector('span:last-child').style.color = vid.muted ? '#10b981' : '#f59e0b';
         });
 
@@ -2595,7 +3062,10 @@ require_once 'includes/header.php';
 
             // Close all other dropdowns
             document.querySelectorAll('.student-dropdown').forEach(d => {
-                if (d !== dropdown) { d.style.display = 'none'; d.classList.remove('open'); }
+                if (d !== dropdown) {
+                    d.style.display = 'none';
+                    d.classList.remove('open');
+                }
             });
 
             const isOpen = dropdown.style.display === 'block';
@@ -2616,7 +3086,9 @@ require_once 'includes/header.php';
         };
 
         menuBtn.onmouseenter = () => menuBtn.style.background = 'rgba(59, 130, 246, 0.8)';
-        menuBtn.onmouseleave = () => { if (!dropdown.classList.contains('open')) menuBtn.style.background = 'rgba(0,0,0,0.5)'; };
+        menuBtn.onmouseleave = () => {
+            if (!dropdown.classList.contains('open')) menuBtn.style.background = 'rgba(0,0,0,0.5)';
+        };
 
         // Close dropdown when clicking anywhere
         document.addEventListener('click', (e) => {
@@ -2634,14 +3106,21 @@ require_once 'includes/header.php';
     function muteStudent(peerId, name) {
         if (confirm(`${name} adlı tələbənin səsini kəsmək istəyirsiniz?`)) {
             const conn = allDataConns.find(c => c.peer === peerId);
-            if (conn) { conn.send({ type: 'mute_force' }); LOG(`${name} səsi kəsildi.`, "#ef4444"); }
+            if (conn) {
+                conn.send({
+                    type: 'mute_force'
+                });
+                LOG(`${name} səsi kəsildi.`, "#ef4444");
+            }
         }
     }
 
     function refreshAllStudentVideos() {
         LOG("🔄 Bütün tələbə yayımları yenilənir...", "#fde047");
         allDataConns.forEach(conn => {
-            if (conn.open) conn.send({ type: 'refresh_stream' });
+            if (conn.open) conn.send({
+                type: 'refresh_stream'
+            });
         });
     }
 
@@ -2675,6 +3154,7 @@ require_once 'includes/header.php';
             document.getElementById('btnMic').classList.toggle('active-red', !t.enabled);
         }
     }
+
     function toggleCam() {
         const t = camStream.getVideoTracks()[0];
         if (t) {
@@ -2692,7 +3172,9 @@ require_once 'includes/header.php';
             LOG("Ekran paylaşımı dayandırıldı.", "#f59e0b");
         } else {
             try {
-                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true
+                });
                 document.getElementById('screenSource').srcObject = screenStream;
                 isScreenSharing = true;
                 btn.classList.add('active-green');
@@ -2723,12 +3205,16 @@ require_once 'includes/header.php';
         document.body.appendChild(modal);
 
         document.getElementById('btnApproveSS').onclick = () => {
-            conn.send({ type: 'screen_share_approved' });
+            conn.send({
+                type: 'screen_share_approved'
+            });
             LOG(`✅ ${name} üçün ekran paylaşımına icazə verildi.`, "#10b981");
             modal.remove();
         };
         document.getElementById('btnRejectSS').onclick = () => {
-            conn.send({ type: 'screen_share_rejected' });
+            conn.send({
+                type: 'screen_share_rejected'
+            });
             LOG(`❌ ${name} üçün ekran paylaşım sorğusu rədd edildi.`, "#f43f5e");
             modal.remove();
         };
@@ -2784,7 +3270,9 @@ require_once 'includes/header.php';
         if (spotlightPeerId) {
             const conn = allDataConns.find(c => c.peer === spotlightPeerId && c.open);
             if (conn) {
-                conn.send({ type: 'whiteboard_force_stop' });
+                conn.send({
+                    type: 'whiteboard_force_stop'
+                });
                 LOG("🛑 Tələbəyə lövhəni dayandırmaq əmri göndərildi.", "#f59e0b");
             }
         }
@@ -2816,11 +3304,15 @@ require_once 'includes/header.php';
         `;
         document.body.appendChild(modal);
         document.getElementById('btnApproveMic').onclick = () => {
-            conn.send({ type: 'mic_approved' });
+            conn.send({
+                type: 'mic_approved'
+            });
             modal.remove();
         };
         document.getElementById('btnRejectMic').onclick = () => {
-            conn.send({ type: 'mic_rejected' });
+            conn.send({
+                type: 'mic_rejected'
+            });
             modal.remove();
         };
     }
@@ -2850,11 +3342,16 @@ require_once 'includes/header.php';
             formData.append('live_class_id', lID);
             formData.append('user_id', userId);
 
-            fetch('api/approve_rejoin.php', { method: 'POST', body: formData })
+            fetch('api/approve_rejoin.php', {
+                    method: 'POST',
+                    body: formData
+                })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        conn.send({ type: 'entry_approved' });
+                        conn.send({
+                            type: 'entry_approved'
+                        });
                         LOG(`✅ ${name} üçün yenidən giriş icazəsi verildi`, "#10b981");
                         modal.remove();
                     } else {
@@ -2867,7 +3364,9 @@ require_once 'includes/header.php';
                 });
         };
         document.getElementById('btnRejectRejoin-' + userId).onclick = () => {
-            conn.send({ type: 'entry_rejected' });
+            conn.send({
+                type: 'entry_rejected'
+            });
             LOG(`❌ ${name} üçün giriş sorğusu rədd edildi`, "#f43f5e");
             modal.remove();
         };
@@ -2911,10 +3410,15 @@ require_once 'includes/header.php';
         if (!confirm("Dərsi bitirmək və arxivləmək istəyirsiniz?")) return;
 
         LOG("🏁 Dərs bitirilir...", "#f59e0b");
-        broadcastData({ type: 'lesson_ended' });
+        broadcastData({
+            type: 'lesson_ended'
+        });
 
         // Periodic flush-u dayandır
-        if (chunkFlushInterval) { clearInterval(chunkFlushInterval); chunkFlushInterval = null; }
+        if (chunkFlushInterval) {
+            clearInterval(chunkFlushInterval);
+            chunkFlushInterval = null;
+        }
 
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             LOG("🎥 Yazı dayandırılır...", "#f59e0b");
@@ -2937,14 +3441,19 @@ require_once 'includes/header.php';
                     // Bütün parçalar artıq serverə göndərilib, əlavə video yoxdur
                     fd.append('no_video', '1');
                 } else {
-                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const blob = new Blob(recordedChunks, {
+                        type: 'video/webm'
+                    });
                     LOG(`📦 Video Blobu yaradıldı: ${(blob.size / 1024 / 1024).toFixed(2)} MB`, "#10b981");
                     fd.append('video', blob);
                 }
 
                 LOG("🚀 Serverə göndərilir...", "#3b82f6");
 
-                fetch('api/upload_recording.php', { method: 'POST', body: fd })
+                fetch('api/upload_recording.php', {
+                        method: 'POST',
+                        body: fd
+                    })
                     .then(r => r.text())
                     .then(text => {
                         LOG("📥 Server cavabı alındı.", "#10b981");
@@ -2988,7 +3497,11 @@ require_once 'includes/header.php';
         // Second Fallback: Try to find in the global attendees list if possible
         if (!uId || uId === 'undefined' || uId === 'null') {
             LOG(`❌ Xəta: Bu tələbənin ID-si tapılmadı (${name}). ID: ${uId}`, "#ef4444");
-            console.error("Kick Error: uId is invalid", { pId, name, uId });
+            console.error("Kick Error: uId is invalid", {
+                pId,
+                name,
+                uId
+            });
             return;
         }
 
@@ -3000,7 +3513,10 @@ require_once 'includes/header.php';
         fd.append('live_class_id', lID);
         fd.append('user_id', uId);
 
-        fetch('api/kick_student.php', { method: 'POST', body: fd })
+        fetch('api/kick_student.php', {
+                method: 'POST',
+                body: fd
+            })
             .then(r => {
                 if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
                 return r.json();
@@ -3014,7 +3530,9 @@ require_once 'includes/header.php';
                     if (pId && peer && peer.connections && peer.connections[pId]) {
                         peer.connections[pId].forEach(conn => {
                             if (conn.type === 'data' && conn.open) {
-                                conn.send({ type: 'kick_user' });
+                                conn.send({
+                                    type: 'kick_user'
+                                });
                                 notified = true;
                             }
                         });
@@ -3132,8 +3650,7 @@ require_once 'includes/header.php';
                     const list = document.getElementById('liveAttendanceList');
                     if (data.attendees.length === 0) {
                         list.innerHTML = '<div style="color: #64748b; font-style: italic; text-align:center; padding:20px; font-size:12px;">Hələ ki, qoşulub yoxdur.</div>';
-                    }
-                    else {
+                    } else {
                         list.innerHTML = data.attendees.map(att => {
                             const uID = att.userId || att.user_id || att.id || 'N/A';
 
@@ -3224,14 +3741,25 @@ require_once 'includes/header.php';
         const title = titleEl ? titleEl.value : '';
         const message = messageEl ? messageEl.value : '';
         const btn = document.getElementById('sendNotifyBtn');
-        if (!message) { alert("Mesaj boş ola bilməz!"); return; }
+        if (!message) {
+            alert("Mesaj boş ola bilməz!");
+            return;
+        }
         btn.disabled = true;
         btn.innerHTML = 'Göndərilir...';
         fetch('api/send_notification.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target_type: type, target_id: targetId, title: title, message: message, type: 'info' })
-        })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    target_type: type,
+                    target_id: targetId,
+                    title: title,
+                    message: message,
+                    type: 'info'
+                })
+            })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -3279,22 +3807,31 @@ require_once 'includes/header.php';
 
     // --- ATTENDANCE TRACKING ---
     function trackAttendance(type) {
-        const params = { type: type, live_class_id: lID };
+        const params = {
+            type: type,
+            live_class_id: lID
+        };
         if (peer && peer.id) params.peer_id = peer.id;
         if (type === 'leave') {
-            const blob = new Blob([JSON.stringify(params)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(params)], {
+                type: 'application/json'
+            });
             navigator.sendBeacon('api/track_attendance.php', blob);
             return;
         }
         fetch('api/track_attendance.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(params),
             credentials: 'include'
         }).catch(err => console.error("Attendance Track Error:", err));
     }
 
-    setInterval(() => { if (peer && peer.open) trackAttendance('heartbeat'); }, 30000);
+    setInterval(() => {
+        if (peer && peer.open) trackAttendance('heartbeat');
+    }, 30000);
 
     // Start everything correctly on load
     window.onload = () => {
@@ -3320,7 +3857,7 @@ require_once 'includes/header.php';
     });
 
     // Klaviatura qısayollarını (F5, Ctrl+R) blokla
-    window.addEventListener('keydown', function (e) {
+    window.addEventListener('keydown', function(e) {
         if ((e.which || e.keyCode) == 116 || (e.ctrlKey && (e.which || e.keyCode) == 82)) {
             e.preventDefault();
             LOG("⚠️ Səhifəni yeniləmək qadağandır!", "#ef4444");
